@@ -3,18 +3,16 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="JVFS Device Claim", layout="wide")
+st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-# เชื่อมต่อ Google Sheets
-# แก้ไข: เพิ่มสิทธิ์การเข้าถึงข้อมูลให้ชัดเจน
+# 1. เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# ดึงข้อมูล (เพิ่ม Error Handling)
+# ดึงข้อมูลหลัก (ตารางสะสมรายการเคลม)
 try:
     df = conn.read(ttl="0")
-except Exception as e:
-    st.error(f"ไม่สามารถเชื่อมต่อ Google Sheets ได้: {e}")
-    st.info("ตรวจสอบว่าได้ตั้งค่า Secrets ใน Streamlit Cloud หรือยัง?")
+except Exception:
+    st.error("❌ ไม่พบการตั้งค่า Spreadsheet! กรุณาตรวจสอบ 'Spreadsheet URL' ใน Streamlit Secrets")
     st.stop()
 # ในที่นี้ขอยกตัวอย่างรายชื่อสาขาหลักๆ ตามไฟล์ที่คุณส่งมา
 branch_list = ["One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
@@ -26,79 +24,87 @@ branch_list = ["One Bangkok", "กรุงเทพมหานคร 1 (สจ
     "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง", "ระนอง", 
     "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
     "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"]
+# 3. ประเภทอุปกรณ์ (อ้างอิงจากไฟล์ที่คุณอัปโหลด)
 device_types = [
-    "Signature pad", "Monitor Dell", "UPS ประจำศูนย์", "CCTV", 
-    "TV Samsung", "Printer Pantum", "Passport Scanner", 
-    "Iris Scanner", "Android Box", "Newland HR2000"
+    "Signature pad", "Passport Scanner", "Iris Scanner", "Printer Thermal (ปริ้นคิว)",
+    "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
+    "Android Box", "Adapter Android Box", "Monitor Dell", "Dell Pro Tower", "CCTV", "TV Samsung"
 ]
 
 st.title("📑 JVFS Device Claim System")
+st.info("ระบบบันทึกและติดตามสถานะการเคลมอุปกรณ์ (อัปเดตตามโครงสร้าง JVFS-DeviceClaim)")
 
-# --- ส่วนบันทึกและแก้ไข (Input & Edit) ---
-with st.expander("➕ เพิ่มรายการเคลมใหม่"):
-    with st.form("add_claim", clear_on_submit=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            d_type = st.selectbox("ประเภทอุปกรณ์", device_types)
-            branch = st.selectbox("สาขา", branch_list)
-            # ใช้ชื่อกลางว่า Counter เพื่อรองรับทั้ง "ชุดคิวที่" หรือ "กล้องตัวที่"
-            counter = st.text_input("ชุดที่ / เคาน์เตอร์ / กล้องตัวที่")
-        with c2:
+# --- ส่วนที่ 1: บันทึกข้อมูลใหม่ ---
+with st.expander("➕ เพิ่มรายการเคลมใหม่ (Add New Claim)"):
+    with st.form("main_form", clear_on_submit=True):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            category = st.selectbox("ประเภทอุปกรณ์", device_types)
+            branch = st.selectbox("สาขา", branches)
+            counter = st.text_input("ชุดคิว / เคาน์เตอร์ / กล้องตัวที่")
+        
+        with col2:
             asset_no = st.text_input("Asset No.")
-            sn_fault = st.text_input("Serial เครื่องที่เสีย")
-            symptom = st.text_area("อาการเสีย")
-        with c3:
-            status = st.selectbox("สถานะ", ["Done", "inprogress", "Pending"])
+            sn_faulty = st.text_input("Serial เครื่องที่เสีย (S/N)")
+            symptom = st.text_area("อาการเสีย / ปัญหาที่พบ")
+            
+        with col3:
+            status = st.selectbox("สถานะ", ["Pending", "inprogress", "Done"])
+            date_sent = st.date_input("วันที่ส่งเคลม", value=datetime.now())
             sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่")
-            trackmo = st.checkbox("แก้ใน TrackMo แล้ว")
 
-        if st.form_submit_button("บันทึกข้อมูล"):
+        trackmo = st.checkbox("แก้ไขใน TrackMo เรียบร้อยแล้ว")
+        remark = st.text_input("หมายเหตุเพิ่มเติม")
+
+        if st.form_submit_button("บันทึกข้อมูลลงระบบ"):
             new_row = pd.DataFrame([{
-                "วันที่แจ้ง": datetime.now().strftime("%Y-%m-%d"),
-                "ประเภทอุปกรณ์": d_type,
+                "วันที่บันทึก": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "วันที่ส่งเคลม": date_sent.strftime("%Y-%m-%d"),
+                "ประเภทอุปกรณ์": category,
                 "สาขา": branch,
-                "Counter": counter,
+                "ตำแหน่ง/เคาน์เตอร์": counter,
                 "Asset No.": asset_no,
-                "Serial เครื่องที่เสีย": sn_fault,
-                "อาการ": symptom,
+                "S/N เครื่องเสีย": sn_faulty,
+                "อาการเสีย": symptom,
                 "สถานะ": status,
-                "Serial เครื่องที่เปลี่ยนใหม่": sn_new,
-                "แก้ในTrackMo": trackmo
+                "S/N เครื่องใหม่": sn_new,
+                "TrackMo": "Yes" if trackmo else "No",
+                "หมายเหตุ": remark
             }])
+            
+            # อัปเดตไปยัง Google Sheets
             updated_df = pd.concat([df, new_row], ignore_index=True)
             conn.update(data=updated_df)
-            st.success("บันทึกสำเร็จ!")
+            st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
             st.rerun()
 
-# --- ส่วนการค้นหาและจำแนกอุปกรณ์ (Search & Categorize) ---
+# --- ส่วนที่ 2: แสดงข้อมูลและตัวกรอง ---
 st.divider()
-col_search, col_filter = st.columns([2, 1])
+st.subheader("🔍 รายการอุปกรณ์ทั้งหมด")
 
-with col_search:
-    search = st.text_input("🔎 ค้นหา S/N หรือ Asset No.")
-with col_filter:
-    type_filter = st.multiselect("จำแนกตามประเภท", device_types)
+# ตัวกรองข้อมูล
+f_col1, f_col2, f_col3 = st.columns(3)
+with f_col1:
+    search_sn = st.text_input("🔎 ค้นหาจาก S/N หรือ Asset No.")
+with f_col2:
+    filter_cat = st.multiselect("กรองประเภทอุปกรณ์", device_types)
+with f_col3:
+    filter_stat = st.multiselect("กรองสถานะ", ["Pending", "inprogress", "Done"])
 
-# กรองข้อมูล
-display_df = df.copy()
-if search:
-    display_df = display_df[
-        display_df["Serial เครื่องที่เสีย"].str.contains(search, na=False) | 
-        display_df["Asset No."].str.contains(search, na=False)
-    ]
-if type_filter:
-    display_df = display_df[display_df["ประเภทอุปกรณ์"].isin(type_filter)]
+# การกรอง Dataframe
+view_df = df.copy()
+if search_sn:
+    view_df = view_df[view_df['S/N เครื่องเสีย'].astype(str).str.contains(search_sn) | 
+                      view_df['Asset No.'].astype(str).str.contains(search_sn)]
+if filter_cat:
+    view_df = view_df[view_df['ประเภทอุปกรณ์'].isin(filter_cat)]
+if filter_stat:
+    view_df = view_df[view_df['สถานะ'].isin(filter_stat)]
 
-# แสดงผลตารางหลัก
-st.subheader("📋 รายการข้อมูลทั้งหมด")
-st.dataframe(display_df, use_container_width=True)
+st.dataframe(view_df, use_container_width=True)
 
-# --- ส่วนการดึง Report ---
-if not display_df.empty:
-    csv = display_df.to_csv(index=False).encode('utf_8_sig')
-    st.download_button(
-        label="📥 Download Report (CSV)",
-        data=csv,
-        file_name=f"JVFS_Report_{datetime.now().strftime('%Y%m%d')}.csv",
-        mime="text/csv",
-    )
+# ปุ่มดาวน์โหลด Report
+if not view_df.empty:
+    csv = view_df.to_csv(index=False).encode('utf_8_sig')
+    st.download_button("📥 ดาวน์โหลดรายงานเป็น CSV", csv, "JVFS_Claim_Report.csv", "text/csv")
