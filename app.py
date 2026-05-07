@@ -21,13 +21,6 @@ try:
         # ล้างช่องว่างหน้า-หลังชื่อคอลัมน์ ป้องกัน KeyError
         df.columns = df.columns.str.strip()
         
-        # ตรวจสอบว่าคอลัมน์หลักมีครบไหม ถ้าไม่มีให้แจ้งเตือนชัดเจน
-        missing_cols = [c for c in ["สถานะ", "S/N เครื่องเสีย"] if c not in df.columns]
-        if missing_cols:
-            st.error(f"❌ ไม่พบคอลัมน์: {', '.join(missing_cols)} ใน Google Sheets")
-            st.info(f"ชื่อคอลัมน์ที่ระบบตรวจพบตอนนี้คือ: {list(df.columns)}")
-            st.stop()
-    else:
         # กรณี Sheet ว่างเปล่า ให้สร้าง DataFrame เปล่าที่มีหัวตารางครบ
         df = pd.DataFrame(columns=EXPECTED_COLUMNS)
 
