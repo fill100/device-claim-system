@@ -54,4 +54,3 @@ if not df.empty and "แก้ในTrackMo" in df.columns:
     m1.metric("รายการทั้งหมด", len(df))
     
     track_series = df["แก้ในTrackMo"].fillna("").astype(str).str.strip()
-    m
