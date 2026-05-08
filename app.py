@@ -72,4 +72,18 @@ if "แก้ในTrackMo" in df.columns:
 st.divider()
 
 # --- ส่วนที่ 2: ฟอร์มบันทึกข้อมูลใหม่ ---
-with st.expander(f"➕ เพิ่มรายการใหม่ลงใน {
+# --- ส่วนที่ 2: ฟอร์มบันทึกข้อมูลใหม่ ---
+# ตรวจสอบว่ามี f อยู่หน้าอัญประกาศ และมี {selected_sheet} ปิดด้วย } ให้เรียบร้อย
+with st.expander(f"➕ เพิ่มรายการใหม่ลงใน {selected_sheet}"):
+    with st.form("main_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            branch = st.selectbox("สาขา", ["One Bangkok", "กรุงเทพฯ 1", "กรุงเทพฯ 2", "นนทบุรี", "สมุทรสาคร", "เชียงใหม่", "ตาก", "สงขลา"])
+            counter = st.text_input("Counter")
+            sn_faulty = st.text_input("Serial เครื่องที่เสีย (บังคับ)")
+            sn_to_center = st.text_input("Serial เครื่องที่ส่งให้ศูนย์")
+        with col2:
+            status = st.selectbox("แก้ในTrackMo", ["Pending", "inprogress", "Done"])
+            date_claim = st.date_input("วันที่ส่งเคลม", value=None)
+            date_install = st.date_input("วันที่นำไปติดตั้งใหม่", value=None)
+            sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่")
