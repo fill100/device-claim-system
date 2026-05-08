@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
+st.set_page_config(page_title="📁JVFS Device Claim System", layout="wide")
 
 # เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
