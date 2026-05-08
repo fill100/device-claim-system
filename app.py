@@ -121,13 +121,11 @@ if not view.empty:
                 new_st = st.selectbox("เปลี่ยนสถานะ", ["inprogress", "Done"], index=idx)
             with e2:
                 new_center = st.text_input("Serial ส่งศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                new_new = st.text_input("Serial เครื่องใหม่", value=str(row["Serial เครื่องที่เปลี่ยนใหม่"]))
             
             if st.form_submit_button("ยืนยันการแก้ไข"):
                 target_idx = df.index[df["Serial เครื่องที่เสีย"].astype(str) == sel_sn].tolist()[0]
                 df.at[target_idx, "สถานะ"] = new_st
                 df.at[target_idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_center
-                df.at[target_idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_new
                 conn.update(worksheet=selected_sheet, data=df)
                 st.success("อัปเดตเรียบร้อย!")
                 st.rerun()
