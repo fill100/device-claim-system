@@ -5,12 +5,10 @@ from datetime import datetime
 
 st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1jphuWBQJ36hb3vtzCZnbmrbpNmj0MJ6yu869cj_sfS8/edit?usp=sharing"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1PP9tWlFHKCWKxctB5Eq_cwVstIALpOrG5n0AaDWKd3U/edit?usp=drive_link"
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# การดึงข้อมูล
-df = conn.read(ttl="0") # ไม่ต้องใส่ URL ในโค้ดแล้ว เพราะระบุใน Secrets แล้ว
 
 # กำหนดชื่อคอลัมน์มาตรฐานที่ต้องมีในระบบ
 EXPECTED_COLUMNS = [
