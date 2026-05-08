@@ -5,7 +5,8 @@ from datetime import datetime
 
 st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-# เชื่อมต่อโดยไม่ระบุ type ในโค้ด (ให้ดึงจาก Secrets แทน)
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1jphuWBQJ36hb3vtzCZnbmrbpNmj0MJ6yu869cj_sfS8/edit?usp=sharing"
+
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # การดึงข้อมูล
