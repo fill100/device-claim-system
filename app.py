@@ -134,13 +134,20 @@ with refresh_col:
         st.cache_data.clear()
         st.rerun()
 
+# --- ส่วนการกรองข้อมูล (Logic) ---
+view_df = df.copy()
+if search_query:
+    mask = view_df.astype(str).apply(
+        lambda x: x.str.contains(search_query, case=False, na=False)
+    ).any(axis=1)
+    view_df = view_df[mask]
 
 # --- ส่วนที่ 4: แสดงผลตารางข้อมูล ---
 if not view_df.empty:
     st.write(f"📊 พบข้อมูลทั้งหมด {len(view_df)} รายการ")
     st.dataframe(view_df, use_container_width=True, hide_index=True)
-
-# --- ส่วนที่ 4: แสดงตารางและแก้ไข ---
+    
+# --- ส่วนที่ 5: แสดงตารางและแก้ไข ---
 if not view_df.empty:
     st.dataframe(view_df, use_container_width=True, hide_index=True)
     with st.expander("📝 แก้ไขข้อมูล"):
