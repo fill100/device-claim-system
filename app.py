@@ -72,8 +72,6 @@ if "แก้ในTrackMo" in df.columns:
 st.divider()
 
 # --- ส่วนที่ 2: ฟอร์มบันทึกข้อมูลใหม่ ---
-# --- ส่วนที่ 2: ฟอร์มบันทึกข้อมูลใหม่ ---
-# ตรวจสอบว่ามี f อยู่หน้าอัญประกาศ และมี {selected_sheet} ปิดด้วย } ให้เรียบร้อย
 with st.expander(f"➕ เพิ่มรายการใหม่ลงใน {selected_sheet}"):
     with st.form("main_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -87,3 +85,78 @@ with st.expander(f"➕ เพิ่มรายการใหม่ลงใน
             date_claim = st.date_input("วันที่ส่งเคลม", value=None)
             date_install = st.date_input("วันที่นำไปติดตั้งใหม่", value=None)
             sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่")
+        
+        if st.form_submit_button("บันทึกข้อมูล"):
+            if not sn_faulty:
+                st.warning("⚠️ กรุณากรอก Serial เครื่องที่เสีย")
+            else:
+                str_date_claim = date_claim.strftime("%Y-%m-%d") if date_claim else ""
+                str_date_install = date_install.strftime("%Y-%m-%d") if date_install else ""
+                
+                # สร้างข้อมูลใหม่ (เช็กวงเล็บและปีกกาให้ครบ)
+                new_row = pd.DataFrame([{
+                    "วันที่รับแจ้ง": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "วันที่ส่งเคลม": str_date_claim,
+                    "วันทีนำไปติดตั้งใหม่": str_date_install,
+                    "สาขา": branch,
+                    "counter": counter,
+                    "Serial เครื่องที่เสีย": sn_faulty,
+                    "Serial เครื่องที่ส่งให้ศูนย์": sn_to_center,
+                    "Serial เครื่องที่เปลี่ยนใหม่": sn_new,
+                    "แก้ในTrackMo": status
+                }])
+                
+                # รวมข้อมูลและอัปเดตลง Sheet เดิมที่เลือกไว้
+                updated_df = pd.concat([df, new_row], ignore_index=True)
+                updated_df = updated_df[EXPECTED_COLUMNS] # จัดเรียงคอลัมน์
+                
+                conn.update(worksheet=selected_sheet, data=updated_df)
+                st.success(f"✅ บันทึกลงใน {selected_sheet} สำเร็จ!")
+                st.rerun()
+
+# --- ส่วนที่ 3: ระบบค้นหา ---
+st.subheader("🔍 ค้นหาข้อมูล")
+search_query = st.text_input(f"🔎 ค้นหาใน {selected_sheet} (Serial, Counter, หรือ สาขา)")
+
+view_df = df.copy()
+if search_query:
+    mask = view_df.astype(str).apply(lambda x: x.str.contains(search_query, case=False, na=False)).any(axis=1)
+    view_df = view_df[mask]
+
+# --- ส่วนที่ 4: แสดงผลและแก้ไขข้อมูล ---
+if not view_df.empty:
+    st.dataframe(view_df, use_container_width=True, hide_index=True)
+
+    with st.expander("📝 แก้ไขข้อมูลในแถวที่เลือก"):
+        valid_sn_list = view_df["Serial เครื่องที่เสีย"].dropna().unique().tolist()
+        selected_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่จะแก้ไข", valid_sn_list)
+        
+        if selected_sn:
+            target_data = df[df["Serial เครื่องที่เสีย"] == selected_sn].iloc[0]
+            with st.form("edit_form"):
+                edit_col1, edit_col2 = st.columns(2)
+                with edit_col1:
+                    current_status = str(target_data["แก้ในTrackMo"]).strip()
+                    s_options = ["Pending", "inprogress", "Done"]
+                    s_idx = s_options.index(current_status) if current_status in s_options else 0
+                    
+                    new_status = st.selectbox("อัปเดตสถานะ", s_options, index=s_idx)
+                    new_sn_to_center = st.text_input("Serial ส่งให้ศูนย์", value=str(target_data["Serial เครื่องที่ส่งให้ศูนย์"]))
+                with edit_col2:
+                    new_sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่", value=str(target_data["Serial เครื่องที่เปลี่ยนใหม่"]))
+                
+                if st.form_submit_button("ยืนยันการแก้ไข"):
+                    idx = df.index[df["Serial เครื่องที่เสีย"] == selected_sn].tolist()[0]
+                    df.at[idx, "แก้ในTrackMo"] = new_status
+                    df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_to_center
+                    df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_new
+                    
+                    conn.update(worksheet=selected_sheet, data=df)
+                    st.success("อัปเดตข้อมูลเรียบร้อย!")
+                    st.rerun()
+
+    # ปุ่มดาวน์โหลด CSV
+    csv = view_df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button("📥 ดาวน์โหลด CSV", csv, f"claim_report_{selected_sheet}.csv", "text/csv")
+else:
+    st.info(f"💡 ไม่พบข้อมูลใน {selected_sheet}")
