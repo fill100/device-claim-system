@@ -29,6 +29,10 @@ AVAILABLE_SHEETS = [
 # 2. เมนูเลือก Worksheet ที่ Sidebar
 st.sidebar.title("📁 การจัดการข้อมูล")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet ที่ต้องการใช้งาน:", AVAILABLE_SHEETS)
+# --- เพิ่มปุ่ม Refresh ตรงนี้ ---
+if st.sidebar.button("🔄 รีเฟรชข้อมูล (Refresh)"):
+    st.cache_data.clear() # ล้าง Cache ข้อมูลเก่า
+    st.rerun()
 
 # กำหนดชื่อคอลัมน์มาตรฐานที่ระบบต้องใช้
 EXPECTED_COLUMNS = [
