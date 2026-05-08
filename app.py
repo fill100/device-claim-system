@@ -142,4 +142,33 @@ if not view_df.empty:
     with st.expander("📝 แก้ไขข้อมูลในแถวที่เลือก"):
         v_list = view_df["Serial เครื่องที่เสีย"].loc[view_df["Serial เครื่องที่เสีย"] != ""].unique().tolist()
         if v_list:
-            sel_sn = st.selectbox("เลือก Serial ที่จะ
+            sel_sn = st.selectbox("เลือก Serial ที่จะแก้ไข", v_list)
+            target_rows = df[df["Serial เครื่องที่เสีย"] == sel_sn]
+            
+            if not target_rows.empty:
+                t_data = target_rows.iloc[0]
+                with st.form("edit_form"):
+                    e1, e2 = st.columns(2)
+                    with e1:
+                        # หา Index ของสถานะปัจจุบันเพื่อให้ Selectbox ตรงกับข้อมูลจริง
+                        current_status = str(t_data["แก้ในTrackMo"])
+                        options = ["Pending", "inprogress", "Done"]
+                        default_idx = options.index(current_status) if current_status in options else 0
+                        
+                        new_st = st.selectbox("อัปเดตสถานะ", options, index=default_idx)
+                        new_sn_c = st.text_input("Serial ส่งศูนย์", value=str(t_data["Serial เครื่องที่ส่งให้ศูนย์"]))
+                    with e2:
+                        new_sn_n = st.text_input("Serial เครื่องใหม่", value=str(t_data["Serial เครื่องที่เปลี่ยนใหม่"]))
+                    
+                    if st.form_submit_button("ยืนยันการแก้ไข"):
+                        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
+                        df.at[idx, "แก้ในTrackMo"] = new_st
+                        df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_c
+                        df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_n
+                        conn.update(worksheet=selected_sheet, data=df)
+                        st.success("อัปเดตข้อมูลเรียบร้อย!")
+                        st.rerun()
+        else:
+            st.warning("ไม่พบ Serial Number สำหรับการแก้ไข")
+else:
+    st.info("💡 ไม่พบข้อมูลที่ค้นหา")
