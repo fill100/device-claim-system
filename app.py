@@ -29,10 +29,7 @@ AVAILABLE_SHEETS = [
 # 2. เมนูเลือก Worksheet ที่ Sidebar
 st.sidebar.title("📁 การจัดการข้อมูล")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet ที่ต้องการใช้งาน:", AVAILABLE_SHEETS)
-# --- เพิ่มปุ่ม Refresh ตรงนี้ ---
-if st.sidebar.button("🔄 รีเฟรชข้อมูล (Refresh)"):
-    st.cache_data.clear() # ล้าง Cache ข้อมูลเก่า
-    st.rerun()
+
 
 # กำหนดชื่อคอลัมน์มาตรฐานที่ระบบต้องใช้
 EXPECTED_COLUMNS = [
@@ -118,14 +115,37 @@ with st.expander(f"➕ เพิ่มรายการใหม่ลงใน
                 st.success(f"✅ บันทึกลงใน {selected_sheet} สำเร็จ!")
                 st.rerun()
 
-# --- ส่วนที่ 3: ค้นหาข้อมูล ---
-st.subheader("🔍 ค้นหาข้อมูล")
-search_query = st.text_input(f"🔎 ค้นหาใน {selected_sheet} (Serial, Counter, สาขา)")
+# --- ส่วนที่ 3: ค้นหาและตรวจสอบข้อมูล (พร้อมปุ่มรีเฟรชในตัว) ---
+st.subheader("🔍 ค้นหาและตรวจสอบข้อมูล")
 
+# แบ่งพื้นที่เป็น 2 ฝั่ง: ฝั่งพิมพ์ค้นหา กับ ฝั่งปุ่มรีเฟรช
+search_col, refresh_col = st.columns([5, 1])
+
+with search_col:
+    search_query = st.text_input(
+        f"🔎 พิมพ์คำค้นหาใน {selected_sheet}...", 
+        placeholder="S/N, Counter, หรือ สาขา",
+        label_visibility="collapsed" # ซ่อนหัวข้อเพื่อความสวยงาม
+    )
+
+with refresh_col:
+    # ปุ่มรีเฟรชเฉพาะส่วนตาราง
+    if st.button("🔄 Refresh"):
+        st.cache_data.clear()
+        st.rerun()
+
+# --- ส่วนการกรองข้อมูล (Logic) ---
 view_df = df.copy()
 if search_query:
-    mask = view_df.astype(str).apply(lambda x: x.str.contains(search_query, case=False, na=False)).any(axis=1)
+    mask = view_df.astype(str).apply(
+        lambda x: x.str.contains(search_query, case=False, na=False)
+    ).any(axis=1)
     view_df = view_df[mask]
+
+# --- ส่วนที่ 4: แสดงผลตารางข้อมูล ---
+if not view_df.empty:
+    st.write(f"📊 พบข้อมูลทั้งหมด {len(view_df)} รายการ")
+    st.dataframe(view_df, use_container_width=True, hide_index=True)
 
 # --- ส่วนที่ 4: แสดงตารางและแก้ไข ---
 if not view_df.empty:
