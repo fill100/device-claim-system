@@ -9,7 +9,8 @@ st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 # 1. รายชื่อ Sheet ทั้งหมดที่มีในไฟล์ของคุณ (ตรวจสอบชื่อให้ตรงกับหน้าเว็บ Google Sheets)
-AVAILABLE_SHEETS = ["Sheet1", "Sheet2", "Sheet3"] 
+AVAILABLE_SHEETS = ["Signature pad", "Passpost", "Iris Scaner","Printer Thermal (ปริ้นคิว)","Printer Pantum","Honeywell g1950","Newland HR2000","UPS ประจำศูนย์","Android Box","Adapter Android Box"
+                   ,"Monitor","PC","CCTV","TV""] 
 
 # 2. เพิ่มตัวเลือกใน Sidebar เพื่อเลือก Sheet ที่ต้องการทำงาน
 st.sidebar.title("📁 การจัดการข้อมูล")
