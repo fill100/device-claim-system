@@ -16,11 +16,7 @@ AVAILABLE_SHEETS = ["Signature pad", "Passpost", "Iris Scaner","Printer Thermal 
 st.sidebar.title("📁 การจัดการข้อมูล")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet ที่ต้องการใช้งาน:", AVAILABLE_SHEETS)
 
-# กำหนดชื่อคอลัมน์มาตรฐาน (ต้องมีเหมือนกันทุก Sheet)
-EXPECTED_COLUMNS = [
-    "วันที่รับแจ้ง", "วันที่ส่งเคลม", "วันทีนำไปติดตั้งใหม่", "สาขา", 
-    "counter", "อาการ","Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", 
-    "Serial เครื่องที่เปลี่ยนใหม่", "แก้ในTrackMo"
+
 ]
 
 # ดึงข้อมูลจาก Sheet ที่เลือก
