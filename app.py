@@ -14,7 +14,7 @@ AVAILABLE_SHEETS = [
     "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
 ]
 
-selected_sheet = st.sidebar.selectbox("เลือก Worksheet:", AVAILABLE_SHEETS)
+selected_sheet = st.sidebar.selectbox("เลือก 📁 Worksheet:", AVAILABLE_SHEETS)
 
 EXPECTED_COLUMNS = [
     "วันที่รับแจ้ง", "วันที่ส่งเคลม", "วันทีนำไปติดตั้งใหม่", "สาขา", 
