@@ -42,17 +42,13 @@ except Exception as e:
 st.markdown(f"## 📑 {selected_sheet} Management System")
 st.markdown("---")
 
-# --- ส่วนที่ 1: Dashboard ใหม่ (จำแนกง่ายขึ้น) ---
-st.markdown("### 📊 ภาพรวมสถานะการเคลม")
-# คำนวณค่าแบบยืดหยุ่น (แก้ปัญหาตัวเลขไม่ขึ้น)
-if "แก้ในTrackMo" in df.columns:
-    # ล้างค่าว่างและทำให้เป็นตัวพิมพ์เล็กเพื่อตรวจสอบ
-    status_data = df["แก้ในTrackMo"].fillna("").astype(str).str.strip().str.lower()
-    
-    total = len(df)
-    pending = len(df[status_data == "pending"])
-    inprogress = len(df[status_data == "inprogress"])
-    done = len(df[status_data == "done"])
+# --- ส่วนที่ 1: Dashboard (เหลือเฉพาะยอดรวม) ---
+st.markdown("### 📊 ภาพรวมข้อมูล")
+c1, c2 = st.columns([1, 3])
+with c1:
+    st.metric("📦 รายการทั้งหมด", len(df))
+
+st.markdown("<br>", unsafe_allow_html=True)
 
     # แสดงผลแบบ Card สี
     c1, c2, c3, c4 = st.columns(4)
