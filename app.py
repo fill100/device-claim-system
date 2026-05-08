@@ -8,7 +8,7 @@ st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 # เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 1. รายชื่อ Worksheet ทั้งหมดตามที่คุณต้องการ
+# 1. รายชื่อ Worksheet ทั้งหมด
 AVAILABLE_SHEETS = [
     "Signature pad", 
     "Passpost", 
@@ -30,8 +30,7 @@ AVAILABLE_SHEETS = [
 st.sidebar.title("📁 ข้อมูลอุปกรณ์")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet ที่ต้องการใช้งาน:", AVAILABLE_SHEETS)
 
-
-# กำหนดชื่อคอลัมน์มาตรฐานที่ระบบต้องใช้
+# กำหนดชื่อคอลัมน์มาตรฐาน
 EXPECTED_COLUMNS = [
     "วันที่รับแจ้ง", "วันที่ส่งเคลม", "วันทีนำไปติดตั้งใหม่", "สาขา", 
     "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", 
@@ -43,15 +42,11 @@ try:
     df = conn.read(worksheet=selected_sheet, ttl="0")
     
     if df is not None and not df.empty:
-        # ล้างช่องว่างที่หัวคอลัมน์เพื่อป้องกันปัญหา KeyError
         df.columns = df.columns.str.strip()
-        
-        # ตรวจสอบคอลัมน์ที่ขาดและเติมให้ครบเพื่อให้ระบบทำงานต่อได้
         for col in EXPECTED_COLUMNS:
             if col not in df.columns:
                 df[col] = ""
     else:
-        # ถ้า Sheet ว่าง ให้สร้าง DataFrame เปล่าที่มีหัวตารางครบ
         df = pd.DataFrame(columns=EXPECTED_COLUMNS)
 
 except Exception as e:
@@ -94,7 +89,6 @@ with st.expander(f"➕ เพิ่มรายการใหม่ลงใน
                 str_date_claim = date_claim.strftime("%Y-%m-%d") if date_claim else ""
                 str_date_install = date_install.strftime("%Y-%m-%d") if date_install else ""
                 
-                # สร้างข้อมูลใหม่ (เช็กวงเล็บและปีกกาให้ครบ)
                 new_row = pd.DataFrame([{
                     "วันที่รับแจ้ง": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     "วันที่ส่งเคลม": str_date_claim,
@@ -107,34 +101,30 @@ with st.expander(f"➕ เพิ่มรายการใหม่ลงใน
                     "แก้ในTrackMo": status
                 }])
                 
-                # รวมข้อมูลและอัปเดตลง Sheet เดิมที่เลือกไว้
                 updated_df = pd.concat([df, new_row], ignore_index=True)
-                updated_df = updated_df[EXPECTED_COLUMNS] # จัดเรียงคอลัมน์
+                updated_df = updated_df[EXPECTED_COLUMNS]
                 
                 conn.update(worksheet=selected_sheet, data=updated_df)
-                st.success(f"✅ บันทึกลงใน {selected_sheet} สำเร็จ!")
+                st.success(f"✅ บันทึกสำเร็จ!")
                 st.rerun()
 
-# --- ส่วนที่ 3: ค้นหาและตรวจสอบข้อมูล (พร้อมปุ่มรีเฟรชในตัว) ---
+# --- ส่วนที่ 3: ค้นหาและตรวจสอบข้อมูล ---
 st.subheader("🔍 ค้นหาและตรวจสอบข้อมูล")
-
-# แบ่งพื้นที่เป็น 2 ฝั่ง: ฝั่งพิมพ์ค้นหา กับ ฝั่งปุ่มรีเฟรช
 search_col, refresh_col = st.columns([5, 1])
 
 with search_col:
     search_query = st.text_input(
-        f"🔎 พิมพ์คำค้นหาใน {selected_sheet}...", 
+        "ค้นหา...",
         placeholder="S/N, Counter, หรือ สาขา",
-        label_visibility="collapsed" # ซ่อนหัวข้อเพื่อความสวยงาม
+        label_visibility="collapsed"
     )
 
 with refresh_col:
-    # ปุ่มรีเฟรชเฉพาะส่วนตาราง
     if st.button("🔄 Refresh"):
         st.cache_data.clear()
         st.rerun()
 
-# --- ส่วนการกรองข้อมูล (Logic) ---
+# Logic การกรองข้อมูล
 view_df = df.copy()
 if search_query:
     mask = view_df.astype(str).apply(
@@ -142,34 +132,14 @@ if search_query:
     ).any(axis=1)
     view_df = view_df[mask]
 
-# --- ส่วนที่ 4: แสดงผลตารางข้อมูล ---
+# --- ส่วนที่ 4: แสดงผลตารางเดียวและระบบแก้ไข ---
 if not view_df.empty:
     st.write(f"📊 พบข้อมูลทั้งหมด {len(view_df)} รายการ")
+    # แสดงตารางเพียงครั้งเดียว
     st.dataframe(view_df, use_container_width=True, hide_index=True)
     
-# --- ส่วนที่ 5: แสดงตารางและแก้ไข ---
-if not view_df.empty:
-    # ✅ ให้เหลือแค่บรรทัดนี้ที่เดียวสำหรับการโชว์ตาราง
-    st.dataframe(view_df, use_container_width=True, hide_index=True)
-    with st.expander("📝 แก้ไขข้อมูล"):
+    # ส่วนสำหรับแก้ไขข้อมูล (รวมอยู่ในเงื่อนไขเดียวกัน)
+    with st.expander("📝 แก้ไขข้อมูลในแถวที่เลือก"):
         v_list = view_df["Serial เครื่องที่เสีย"].loc[view_df["Serial เครื่องที่เสีย"] != ""].unique().tolist()
         if v_list:
-            sel_sn = st.selectbox("เลือก Serial ที่จะแก้ไข", v_list)
-            t_data = df[df["Serial เครื่องที่เสีย"] == sel_sn].iloc[0]
-            with st.form("edit_form"):
-                e1, e2 = st.columns(2)
-                with e1:
-                    new_st = st.selectbox("อัปเดตสถานะ", ["Pending", "inprogress", "Done"])
-                    new_sn_c = st.text_input("Serial ส่งศูนย์", value=str(t_data["Serial เครื่องที่ส่งให้ศูนย์"]))
-                with e2:
-                    new_sn_n = st.text_input("Serial เครื่องใหม่", value=str(t_data["Serial เครื่องที่เปลี่ยนใหม่"]))
-                if st.form_submit_button("ยืนยันการแก้ไข"):
-                    idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-                    df.at[idx, "แก้ในTrackMo"] = new_st
-                    df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_c
-                    df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_n
-                    conn.update(worksheet=selected_sheet, data=df)
-                    st.success("อัปเดตเรียบร้อย!")
-                    st.rerun()
-else:
-    st.info("💡 ไม่พบข้อมูล")
+            sel_sn = st.selectbox("เลือก Serial ที่จะ
