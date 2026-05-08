@@ -149,6 +149,7 @@ if not view_df.empty:
     
 # --- ส่วนที่ 5: แสดงตารางและแก้ไข ---
 if not view_df.empty:
+    # ✅ ให้เหลือแค่บรรทัดนี้ที่เดียวสำหรับการโชว์ตาราง
     st.dataframe(view_df, use_container_width=True, hide_index=True)
     with st.expander("📝 แก้ไขข้อมูล"):
         v_list = view_df["Serial เครื่องที่เสีย"].loc[view_df["Serial เครื่องที่เสีย"] != ""].unique().tolist()
