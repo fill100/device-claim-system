@@ -5,8 +5,11 @@ from datetime import datetime
 
 st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-# 1. เชื่อมต่อ Google Sheets
+# เชื่อมต่อโดยไม่ระบุ type ในโค้ด (ให้ดึงจาก Secrets แทน)
 conn = st.connection("gsheets", type=GSheetsConnection)
+
+# การดึงข้อมูล
+df = conn.read(ttl="0") # ไม่ต้องใส่ URL ในโค้ดแล้ว เพราะระบุใน Secrets แล้ว
 
 # กำหนดชื่อคอลัมน์มาตรฐานที่ต้องมีในระบบ
 EXPECTED_COLUMNS = [
