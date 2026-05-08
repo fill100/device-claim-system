@@ -134,13 +134,6 @@ with refresh_col:
         st.cache_data.clear()
         st.rerun()
 
-# --- ส่วนการกรองข้อมูล (Logic) ---
-view_df = df.copy()
-if search_query:
-    mask = view_df.astype(str).apply(
-        lambda x: x.str.contains(search_query, case=False, na=False)
-    ).any(axis=1)
-    view_df = view_df[mask]
 
 # --- ส่วนที่ 4: แสดงผลตารางข้อมูล ---
 if not view_df.empty:
