@@ -27,7 +27,7 @@ AVAILABLE_SHEETS = [
 ]
 
 # 2. เมนูเลือก Worksheet ที่ Sidebar
-st.sidebar.title("📁 การจัดการข้อมูล")
+st.sidebar.title("📁 ข้อมูลอุปกรณ์")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet ที่ต้องการใช้งาน:", AVAILABLE_SHEETS)
 
 
