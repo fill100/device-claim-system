@@ -5,10 +5,8 @@ from datetime import datetime
 
 st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1PP9tWlFHKCWKxctB5Eq_cwVstIALpOrG5n0AaDWKd3U/edit?usp=drive_link"
-
 conn = st.connection("gsheets", type=GSheetsConnection)
-
+df = conn.read(ttl="0")
 
 # กำหนดชื่อคอลัมน์มาตรฐานที่ต้องมีในระบบ
 EXPECTED_COLUMNS = [
