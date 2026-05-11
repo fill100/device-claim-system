@@ -50,19 +50,30 @@ with st.expander("➕ เพิ่มทรัพย์สินใหม่"):
         a_date = st.date_input("PurchaseDate")
         a_price = st.text_input("PurchasePrice", value="0")
         
-        if st.form_submit_button("บันทึก"):
-            if a_code:
-                new_data = pd.DataFrame([{
-                    "AssetCode": a_code, "Serial": a_sn, "ModelName": a_model,
-                    "AssetTypeName": a_type, "BrandName": a_brand, "LocationName": a_loc,
-                    "PurchaseDate": a_date.strftime("%Y-%m-%d"), "PurchasePrice": a_price
-                }])
-                updated_df = pd.concat([df, new_data], ignore_index=True).astype(str)
-                conn.update(worksheet="Sheet1", data=updated_df)
-                st.success("บันทึกสำเร็จ!")
-                st.rerun()
-            else:
-                st.error("ต้องระบุ AssetCode")
+       # ปรับบรรทัดที่บันทึกข้อมูล
+if st.form_submit_button("บันทึก"):
+    if a_code:
+        new_data = pd.DataFrame([{
+            "AssetCode": str(a_code), 
+            "Serial": str(a_sn), 
+            "ModelName": str(a_model),
+            "AssetTypeName": str(a_type), 
+            "BrandName": str(a_brand), 
+            "LocationName": str(a_loc),
+            "PurchaseDate": a_date.strftime("%Y-%m-%d"), 
+            "PurchasePrice": str(a_price) # แปลงเป็นข้อความก่อนส่ง
+        }])
+        
+        # รวมข้อมูลเก่าและใหม่เข้าด้วยกัน
+        updated_df = pd.concat([df, new_data], ignore_index=True)
+        
+        # บังคับให้ทุกช่องเป็นข้อความ (String) ป้องกัน Error
+        updated_df = updated_df.astype(str)
+        
+        # ส่งไปที่ Sheets
+        conn.update(worksheet="Sheet1", data=updated_df)
+        st.success("บันทึกสำเร็จ!")
+        st.rerun()
 
 # 8. Display Table
 st.divider()
