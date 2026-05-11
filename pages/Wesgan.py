@@ -1,20 +1,25 @@
 import streamlit as st
+import streamlit as st
+# โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;} /* ซ่อนเมนูเดิมที่ชื่อ app/Wesgan */
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
+
+# จากนั้นค่อยเขียน Sidebar ในแบบที่เราต้องการ
+with st.sidebar:
+    st.markdown("# 🎮 IT Management")
+    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
+    st.divider()
+    st.caption("v1.2.0 | Developed by IT Team")
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
 st.set_page_config(page_title="Wesgan System", layout="wide")
-# --- ส่วนการปรับแต่ง UI ใน Sidebar ---
-with st.sidebar:
-    st.title("🎮 IT Management")
-    st.markdown("---")
-    
-    # สร้างปุ่มเมนูแบบมี Icon และ Label สวยๆ
-    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
-    
-    st.markdown("---")
-    st.caption("v1.2.0 | Developed by IT Team")
 
 # เชื่อมต่อฐานข้อมูล (ถ้าใช้คนละไฟล์ ให้ระบุ connection name ใหม่ใน secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
