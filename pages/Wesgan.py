@@ -3,88 +3,68 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# 1. ตั้งค่าหน้าจอ (ต้องอยู่บรรทัดแรกๆ)
-st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
+# 1. Page Config
+st.set_page_config(page_title="Wesgan Asset", layout="wide")
 
-# ซ่อนเมนูเดิมเพื่อความสวยงาม
-st.markdown("""
-    <style>
-    [data-testid="stSidebarNav"] {display: none;}
-    [data-testid="stSidebarNavItems"] {display: none;}
-    </style>
-    """, unsafe_allow_html=True)
+# 2. Hide Default Nav
+st.markdown("<style>[data-testid='stSidebarNav'] {display: none;}</style>", unsafe_allow_html=True)
 
-# 2. เชื่อมต่อ Google Sheets ไฟล์ที่ 2
+# 3. Sidebar
+with st.sidebar:
+    st.title("🎮 IT Management")
+    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Wesgan Asset System", icon="🛡️")
+
+# 4. Connection
 try:
     conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
 except Exception as e:
-    st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูล Wesgan ได้ โปรดเช็ค Secrets")
+    st.error("Connection Error: Check your Secrets")
     st.stop()
 
-# 3. กำหนดหัวข้อคอลัมน์ (Asset System)
-ASSET_COLUMNS = [
-    "AssetCode", "Serial", "ModelName", "AssetTypeName", 
-    "BrandName", "LocationName", "PurchaseDate", "PurchasePrice"
-]
+# 5. Column Definitions
+COLS = ["AssetCode", "Serial", "ModelName", "AssetTypeName", "BrandName", "LocationName", "PurchaseDate", "PurchasePrice"]
 
-# 4. Sidebar Custom Navigation
-with st.sidebar:
-    st.markdown("# 🎮 IT Management")
-    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Wesgan Asset System", icon="🛡️")
-    st.divider()
-
-# แก้บรรทัดที่ดึงข้อมูล (ประมาณบรรทัดที่ 36)
+# 6. Load Data
 try:
-    # ถ้าใน Sheets ชื่อ "แผ่น1" ให้เปลี่ยน "Sheet1" เป็น "แผ่น1"
-    df = conn.read(worksheet="Sheet1", ttl="0") 
-    # ... โค้ดส่วนที่เหลือ ...
-except:
-    df = pd.DataFrame(columns=ASSET_COLUMNS)
-# 6. UI หลัก
-st.title("🛡️ ระบบจัดการทรัพย์สินนอกระบบ (Wesgan)")
+    df = conn.read(worksheet="Sheet1", ttl="0")
+    if df is None or df.empty:
+        df = pd.DataFrame(columns=COLS)
+    else:
+        df = df.dropna(how='all') # ลบบรรทัดว่าง
+except Exception:
+    df = pd.DataFrame(columns=COLS)
 
-# --- ส่วนเพิ่มข้อมูล ---
-with st.expander("➕ ลงทะเบียนทรัพย์สินใหม่"):
-    with st.form("add_asset"):
+st.title("🛡️ Wesgan Asset System")
+
+# 7. Add Form
+with st.expander("➕ เพิ่มทรัพย์สินใหม่"):
+    with st.form("add_form", clear_on_submit=True):
         c1, c2, c3 = st.columns(3)
-        with c1:
-            a_code = st.text_input("AssetCode")
-            a_sn = st.text_input("Serial")
-        with c2:
-            a_model = st.text_input("ModelName")
-            a_type = st.text_input("AssetTypeName")
-        with c3:
-            a_brand = st.text_input("BrandName")
-            a_loc = st.text_input("LocationName")
+        a_code = c1.text_input("AssetCode")
+        a_sn = c1.text_input("Serial")
+        a_model = c2.text_input("ModelName")
+        a_type = c2.text_input("AssetTypeName")
+        a_brand = c3.text_input("BrandName")
+        a_loc = c3.text_input("LocationName")
+        a_date = st.date_input("PurchaseDate")
+        a_price = st.text_input("PurchasePrice", value="0")
         
-        d1, d2 = st.columns(2)
-        p_date = d1.date_input("PurchaseDate")
-        p_price = d2.text_input("PurchasePrice", value="0")
-
-        if st.form_submit_button("💾 บันทึกทรัพย์สิน"):
-    # ...
-    # เปลี่ยน "Sheet1" ให้ตรงกับชื่อ Tab จริงเช่นกัน
-    conn.update(worksheet="Sheet1", data=df_updated) 
-    st.success("บันทึกสำเร็จ!")
-    st.rerun()
+        if st.form_submit_button("บันทึก"):
+            if a_code:
+                new_data = pd.DataFrame([{
+                    "AssetCode": a_code, "Serial": a_sn, "ModelName": a_model,
+                    "AssetTypeName": a_type, "BrandName": a_brand, "LocationName": a_loc,
+                    "PurchaseDate": a_date.strftime("%Y-%m-%d"), "PurchasePrice": a_price
                 }])
-                df_updated = pd.concat([df, new_row], ignore_index=True).astype(str)
-                conn.update(worksheet="Sheet1", data=df_updated)
+                updated_df = pd.concat([df, new_data], ignore_index=True).astype(str)
+                conn.update(worksheet="Sheet1", data=updated_df)
                 st.success("บันทึกสำเร็จ!")
                 st.rerun()
-            else: st.error("กรุณาระบุ AssetCode")
+            else:
+                st.error("ต้องระบุ AssetCode")
 
-# --- ตารางแสดงผลและค้นหา ---
+# 8. Display Table
 st.divider()
-search = st.text_input("🔍 ค้นหาทรัพย์สิน:")
-view_df = df.copy()
-if search:
-    mask = view_df.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)
-    view_df = view_df[mask]
-
-st.dataframe(view_df, use_container_width=True, hide_index=True)
-
-# ปุ่มดาวน์โหลด
-if not view_df.empty:
-    st.download_button("📥 Export CSV", view_df.to_csv(index=False).encode('utf-8-sig'), "wesgan_assets.csv")
+st.subheader("🔍 รายการทรัพย์สิน")
+st.dataframe(df, use_container_width=True, hide_index=True)
