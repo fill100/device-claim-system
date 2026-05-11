@@ -13,10 +13,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-import streamlit as st
-from streamlit_gsheets import GSheetsConnection
-import pandas as pd
-
 # ... (โค้ดส่วนตั้งค่าหน้าจอและ CSS เหมือนเดิม) ...
 
 # --- จุดสำคัญ: เชื่อมต่อไฟล์ใหม่ ---
