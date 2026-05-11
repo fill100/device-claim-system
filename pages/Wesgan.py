@@ -3,17 +3,23 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title=" Asset Management", layout="wide")
+# ต้องใส่ set_page_config เป็นบรรทัดแรกของโค้ด (หลัง import)
+st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
 
-# ซ่อนเมนูเดิมของ Streamlit เพื่อใช้ Sidebar ที่เราแต่งเอง
+# เชื่อมต่อไฟล์ที่สอง (ตรวจสอบชื่อให้ตรงกับใน Secrets)
+try:
+    conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
+except Exception as e:
+    st.error("ตั้งค่าการเชื่อมต่อใน Secrets ไม่ถูกต้อง")
+    st.stop() # หยุดการทำงานถ้าระบบเชื่อมต่อไม่ได้
+
+# ส่วนซ่อนเมนูเดิม (CSS)
 st.markdown("""
     <style>
     [data-testid="stSidebarNav"] {display: none;}
     [data-testid="stSidebarNavItems"] {display: none;}
     </style>
     """, unsafe_allow_html=True)
-
-# ... (โค้ดส่วนตั้งค่าหน้าจอและ CSS เหมือนเดิม) ...
 
 # --- จุดสำคัญ: เชื่อมต่อไฟล์ใหม่ ---
 # ระบบจะไปอ่าน URL จาก [connections.gsheets_wesgan] ใน Secrets
