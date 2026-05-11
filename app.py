@@ -42,8 +42,6 @@ def convert_df(df_to_convert):
 # --- 2. Sidebar: ตั้งค่าและ Export ---
 st.sidebar.title("🛠️ ตั้งค่าและรายงาน")
 
-# ส่วน Export Report (นำกลับมาแล้วครับ)
-st.sidebar.subheader("📊 Export Report")
 def handle_export_all():
     all_data = []
     for sheet in st.session_state.available_sheets:
@@ -93,6 +91,8 @@ except Exception:
     df = pd.DataFrame(columns=EXPECTED_COLUMNS)
 
 # เพิ่มปุ่มดาวน์โหลดใน Sidebar หลังดึงข้อมูลสำเร็จ
+# ส่วน Export Report (นำกลับมาแล้วครับ)
+st.sidebar.subheader("📊 Export Report")
 if not df.empty:
     st.sidebar.download_button(f"📥 Download {selected_sheet} (CSV)", convert_df(df), f"{selected_sheet}.csv", "text/csv")
 
