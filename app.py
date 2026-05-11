@@ -145,17 +145,21 @@ with st.expander("➕ เพิ่มรายการใหม่"):
                 st.success("บันทึกสำเร็จ!")
                 st.rerun()
 
-# --- 5. แก้ไขข้อมูล ---
+# --- ส่วนที่ 5: แก้ไขและลบข้อมูล (อัปเดตสถานะ/รายละเอียด) ---
 if not df.empty:
-    with st.expander("📝 อัปเดตสถานะ/ข้อมูล"):
+    with st.expander("📝 อัปเดตสถานะ หรือ ลบข้อมูล"):
+        # เลือกรายการที่จะจัดการ
         sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่ต้องการแก้ไข:", sn_list)
+        sel_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่ต้องการจัดการ:", sn_list)
+        
         row = df[df["Serial เครื่องที่เสีย"] == sel_sn].iloc[0]
         idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
         
-        with st.form("edit_form_final"):
+        # แบ่งเป็น 2 คอลัมน์สำหรับปุ่ม อัปเดต และ ปุ่มลบ
+        with st.form("edit_delete_form"):
             e1, e2 = st.columns(2)
             with e1:
+                # ... (ส่วนอินพุตข้อมูลคงเดิมเหมือนเวอร์ชันล่าสุด) ...
                 try: d_rec = datetime.strptime(str(row["วันที่รับแจ้ง"]), "%Y-%m-%d %H:%M")
                 except: d_rec = datetime.now()
                 new_d_rec = st.date_input("วันที่รับแจ้ง", value=d_rec)
@@ -164,33 +168,38 @@ if not df.empty:
                 except: d_clm = None
                 new_d_clm = st.date_input("วันที่ส่งเคลม", value=d_clm)
                 
-                try: d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
-                except: d_ins = None
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=d_ins)
-                
-                # แก้ไขสาขาในโหมด Edit
-                curr_b = str(row["สาขา"]).strip()
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(curr_b) if curr_b in BRANCH_LIST else 0)
+                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
+            
             with e2:
                 new_c = st.text_input("counter", value=str(row["counter"]))
                 new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์ทดแทนของเดิม", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                opts = ["inprogress", "Done"]
-                curr_s = str(row["สถานะ"]).strip().lower()
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=opts.index(curr_s) if curr_s in opts else 0)
+                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
+
+            st.markdown("---")
+            col_btn1, col_btn2 = st.columns(2)
             
-            if st.form_submit_button("💾 ยืนยันการอัปเดต"):
+            # ปุ่มที่ 1: ยืนยันการอัปเดต
+            if col_btn1.form_submit_button("💾 ยืนยันการอัปเดต"):
                 df = df.astype(object)
                 df.at[idx, "วันที่รับแจ้ง"] = new_d_rec.strftime("%Y-%m-%d %H:%M")
                 df.at[idx, "วันที่ส่งเคลม"] = new_d_clm.strftime("%Y-%m-%d") if new_d_clm else ""
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
                 df.at[idx, "สาขา"] = new_b
                 df.at[idx, "counter"] = new_c
                 df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
                 df.at[idx, "สถานะ"] = new_s
+                
                 conn.update(worksheet=selected_sheet, data=df.astype(str))
-                st.success("อัปเดตเรียบร้อย!")
+                st.success("✅ อัปเดตข้อมูลเรียบร้อย!")
+                st.rerun()
+
+            # ปุ่มที่ 2: ลบข้อมูล (สีแดง)
+            if col_btn2.form_submit_button("🗑️ ลบรายการนี้ออกจากระบบ"):
+                # ลบแถวตาม index ที่เลือก
+                df_dropped = df.drop(idx)
+                
+                # อัปเดตข้อมูลที่ลบแล้วกลับไปยัง Google Sheets
+                conn.update(worksheet=selected_sheet, data=df_dropped.astype(str))
+                st.warning(f"🔥 ลบรายการ Serial: {sel_sn} เรียบร้อยแล้ว")
                 st.rerun()
 
 # --- 6. ตารางค้นหาข้อมูล ---
