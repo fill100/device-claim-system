@@ -13,13 +13,37 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# 2. เชื่อมต่อ Google Sheets
+import streamlit as st
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
+
+# ... (โค้ดส่วนตั้งค่าหน้าจอและ CSS เหมือนเดิม) ...
+
+# --- จุดสำคัญ: เชื่อมต่อไฟล์ใหม่ ---
+# ระบบจะไปอ่าน URL จาก [connections.gsheets_wesgan] ใน Secrets
 conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
 
-# 3. กำหนดหัวข้อคอลัมน์ตามที่คุณต้องการ
 ASSET_COLUMNS = [
-    "AssetCode", "Serial", "ModelName", "AssetTypeName", 
-    "BrandName", "LocationName", "PurchaseDate", "PurchasePrice"
+    "Serial", "ModelName","LocationName", "PurchaseDate", "PurchasePrice"
+]
+
+# การดึงข้อมูล (เปลี่ยนมาอ่านจากไฟล์ใหม่โดยตรง)
+try:
+    # ระบุชื่อ Worksheet ที่อยู่ในไฟล์ใหม่ (เช่น Sheet1)
+    df_wesgan = conn.read(worksheet="Sheet1", ttl="0") 
+    
+    if df_wesgan is not None and not df_wesgan.empty:
+        df_wesgan.columns = df_wesgan.columns.str.strip()
+        # ตรวจสอบคอลัมน์ให้ตรงตามระบบทรัพย์สิน
+        for col in ASSET_COLUMNS:
+            if col not in df_wesgan.columns:
+                df_wesgan[col] = ""
+        df_wesgan = df_wesgan[ASSET_COLUMNS]
+    else:
+        df_wesgan = pd.DataFrame(columns=ASSET_COLUMNS)
+except Exception as e:
+    st.error(f"❌ ไม่สามารถเชื่อมต่อกับไฟล์ Wesgan ได้: {e}")
+    df_wesgan = pd.DataFrame(columns=ASSET_COLUMNS)
 ]
 
 # 4. Sidebar เมนูสลับหน้า
