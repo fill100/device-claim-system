@@ -5,14 +5,16 @@ from datetime import datetime
 
 st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
+# เชื่อมต่อ Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-AVAILABLE_SHEETS = [
-    "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
-    "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
-    "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
-]
-
+# 1. จัดการรายชื่อ Worksheet (ใช้ Session State เพื่อให้จำค่าที่เพิ่มใหม่ได้)
+if 'available_sheets' not in st.session_state:
+    st.session_state.available_sheets = [
+        "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
+        "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
+        "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
+    ]
 # รายชื่อสาขาที่อัปเดตใหม่ทั้งหมด
 BRANCH_LIST = [
     "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
@@ -25,10 +27,19 @@ BRANCH_LIST = [
     "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
     "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
 ]
-
-# --- 1. Sidebar & Export ---
+# --- Sidebar: ส่วนเพิ่มอุปกรณ์ใหม่ ---
+st.sidebar.markdown("### 🆕 เพิ่มประเภทอุปกรณ์ใหม่")
+new_sheet_name = st.sidebar.text_input("ระบุชื่ออุปกรณ์ใหม่ (ต้องตรงกับชื่อ Tab ใน Google Sheet):")
+if st.sidebar.button("➕ เพิ่มเข้าในระบบ"):
+    if new_sheet_name and new_sheet_name not in st.session_state.available_sheets:
+        st.session_state.available_sheets.append(new_sheet_name)
+        st.sidebar.success(f"เพิ่ม '{new_sheet_name}' เรียบร้อย!")
+    else:
+        st.sidebar.warning("กรุณาระบุชื่อหรือชื่อนี้มีอยู่แล้ว")
+        
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 📁 เมนูจัดการข้อมูล")
-selected_sheet = st.sidebar.selectbox("เลือก Worksheet:", AVAILABLE_SHEETS)
+selected_sheet = st.sidebar.selectbox("เลือก Worksheet:", st.session_state.available_sheets)
 
 def convert_df(df_to_convert):
     return df_to_convert.to_csv(index=False).encode('utf-8-sig')
