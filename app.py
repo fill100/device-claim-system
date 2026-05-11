@@ -18,8 +18,8 @@ selected_sheet = st.sidebar.selectbox("เลือก 📁 Worksheet:", AVAILAB
 
 EXPECTED_COLUMNS = [
     "วันที่รับแจ้ง", "วันที่ส่งเคลม", "วันทีนำไปติดตั้งใหม่", "สาขา", 
-    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", 
-    "Serial เครื่องที่เปลี่ยนใหม่", "สถานะ"
+    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์ทดแทนของเดิม"
+    , "สถานะ"
 ]
 
 try:
