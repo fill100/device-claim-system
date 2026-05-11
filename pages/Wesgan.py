@@ -3,17 +3,10 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# ต้องใส่ set_page_config เป็นบรรทัดแรกของโค้ด (หลัง import)
+# 1. ตั้งค่าหน้าจอ
 st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
 
-# เชื่อมต่อไฟล์ที่สอง (ตรวจสอบชื่อให้ตรงกับใน Secrets)
-try:
-    conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
-except Exception as e:
-    st.error("ตั้งค่าการเชื่อมต่อใน Secrets ไม่ถูกต้อง")
-    st.stop() # หยุดการทำงานถ้าระบบเชื่อมต่อไม่ได้
-
-# ส่วนซ่อนเมนูเดิม (CSS)
+# ซ่อนเมนูเดิมของ Streamlit เพื่อใช้ Sidebar ที่เราแต่งเอง
 st.markdown("""
     <style>
     [data-testid="stSidebarNav"] {display: none;}
@@ -21,31 +14,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- จุดสำคัญ: เชื่อมต่อไฟล์ใหม่ ---
-# ระบบจะไปอ่าน URL จาก [connections.gsheets_wesgan] ใน Secrets
-conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
+# 2. เชื่อมต่อ Google Sheets
+conn = st.connection("gsheets", type=GSheetsConnection)
 
+# 3. กำหนดหัวข้อคอลัมน์ตามที่คุณต้องการ
 ASSET_COLUMNS = [
-    "Serial", "ModelName","LocationName", "PurchaseDate", "PurchasePrice"
-]
-
-# การดึงข้อมูล (เปลี่ยนมาอ่านจากไฟล์ใหม่โดยตรง)
-try:
-    # ระบุชื่อ Worksheet ที่อยู่ในไฟล์ใหม่ (เช่น Sheet1)
-    df_wesgan = conn.read(worksheet="Sheet1", ttl="0") 
-    
-    if df_wesgan is not None and not df_wesgan.empty:
-        df_wesgan.columns = df_wesgan.columns.str.strip()
-        # ตรวจสอบคอลัมน์ให้ตรงตามระบบทรัพย์สิน
-        for col in ASSET_COLUMNS:
-            if col not in df_wesgan.columns:
-                df_wesgan[col] = ""
-        df_wesgan = df_wesgan[ASSET_COLUMNS]
-    else:
-        df_wesgan = pd.DataFrame(columns=ASSET_COLUMNS)
-except Exception as e:
-    st.error(f"❌ ไม่สามารถเชื่อมต่อกับไฟล์ Wesgan ได้: {e}")
-    df_wesgan = pd.DataFrame(columns=ASSET_COLUMNS)
+    "AssetCode", "Serial", "ModelName", "AssetTypeName", 
+    "BrandName", "LocationName", "PurchaseDate", "PurchasePrice"
 ]
 
 # 4. Sidebar เมนูสลับหน้า
@@ -54,6 +29,7 @@ with st.sidebar:
     st.page_link("app.py", label="Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.divider()
+    st.caption("v1.3.0 | Asset Management Mode")
 
 # 5. ดึงข้อมูลจาก Google Sheets
 try:
