@@ -14,7 +14,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # 2. เชื่อมต่อ Google Sheets
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection("gsheets_wesgan", type=GSheetsConnection)
 
 # 3. กำหนดหัวข้อคอลัมน์ตามที่คุณต้องการ
 ASSET_COLUMNS = [
