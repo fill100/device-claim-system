@@ -13,6 +13,19 @@ AVAILABLE_SHEETS = [
     "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
 ]
 
+# รายชื่อสาขาที่อัปเดตใหม่ทั้งหมด
+BRANCH_LIST = [
+    "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
+    "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)", "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", 
+    "สมุทรสาคร", "สมุทรปราการ", "นครปฐม", "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", 
+    "สระบุรี", "สุพรรณบุรี", "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", 
+    "จันทบุรี", "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร", 
+    "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี", 
+    "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง", "ระนอง", 
+    "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
+    "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
+]
+
 # --- 1. Sidebar & Export ---
 st.sidebar.markdown("### 📁 เมนูจัดการข้อมูล")
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet:", AVAILABLE_SHEETS)
@@ -47,7 +60,7 @@ except Exception as e:
     st.error(f"❌ Connection Error: {e}")
     st.stop()
 
-# Export Buttons in Sidebar
+# Export Buttons
 if not df.empty:
     st.sidebar.download_button(label=f"📥 Download {selected_sheet} (CSV)", data=convert_df(df), file_name=f"report_{selected_sheet}.csv", mime="text/csv")
 
@@ -85,7 +98,7 @@ with st.expander("➕ เพิ่มรายการใหม่"):
     with st.form("main_form", clear_on_submit=True):
         f1, f2 = st.columns(2)
         with f1:
-            branch = st.selectbox("สาขา", ["One Bangkok", "กรุงเทพฯ 1", "กรุงเทพฯ 2", "นนทบุรี", "สมุทรสาคร", "เชียงใหม่", "ตาก", "สงขลา", "มุกดาหาร", "ชลบุรี"])
+            branch = st.selectbox("สาขา", BRANCH_LIST) # ใช้รายการสาขาใหม่
             counter = st.text_input("Counter")
             sn_fault = st.text_input("S/N เครื่องเสีย (บังคับ)")
         with f2:
@@ -101,12 +114,11 @@ with st.expander("➕ เพิ่มรายการใหม่"):
                 st.success("บันทึกสำเร็จ!")
                 st.rerun()
 
-# --- 5. แก้ไขข้อมูล (อัปเดตสถานะ/รายละเอียด) ---
+# --- 5. แก้ไขข้อมูล ---
 if not df.empty:
     with st.expander("📝 อัปเดตสถานะ/ข้อมูล"):
         sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
         sel_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่ต้องการแก้ไข:", sn_list)
-        
         row = df[df["Serial เครื่องที่เสีย"] == sel_sn].iloc[0]
         idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
         
@@ -125,9 +137,9 @@ if not df.empty:
                 except: d_ins = None
                 new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=d_ins)
                 
-                branches = ["One Bangkok", "กรุงเทพฯ 1", "กรุงเทพฯ 2", "นนทบุรี", "สมุทรสาคร", "เชียงใหม่", "ตาก", "สงขลา", "มุกดาหาร", "ชลบุรี"]
+                # แก้ไขสาขาในโหมด Edit
                 curr_b = str(row["สาขา"]).strip()
-                new_b = st.selectbox("สาขา", branches, index=branches.index(curr_b) if curr_b in branches else 0)
+                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(curr_b) if curr_b in BRANCH_LIST else 0)
             with e2:
                 new_c = st.text_input("counter", value=str(row["counter"]))
                 new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
@@ -146,12 +158,11 @@ if not df.empty:
                 df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
                 df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
                 df.at[idx, "สถานะ"] = new_s
-                
                 conn.update(worksheet=selected_sheet, data=df.astype(str))
                 st.success("อัปเดตเรียบร้อย!")
                 st.rerun()
 
-# --- 6. ตารางค้นหาข้อมูล (จะรีเฟรชข้อมูลตามข้อ 5 อัตโนมัติ) ---
+# --- 6. ตารางค้นหาข้อมูล ---
 st.divider()
 st.subheader("🔍 ค้นหาข้อมูล")
 q = st.text_input("ค้นหา:", placeholder="Serial, สาขา, สถานะ...", label_visibility="collapsed")
