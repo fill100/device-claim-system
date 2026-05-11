@@ -4,6 +4,17 @@ import pandas as pd
 from datetime import datetime
 
 st.set_page_config(page_title="Wesgan System", layout="wide")
+# --- ส่วนการปรับแต่ง UI ใน Sidebar ---
+with st.sidebar:
+    st.title("🎮 IT Management")
+    st.markdown("---")
+    
+    # สร้างปุ่มเมนูแบบมี Icon และ Label สวยๆ
+    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
+    
+    st.markdown("---")
+    st.caption("v1.2.0 | Developed by IT Team")
 
 # เชื่อมต่อฐานข้อมูล (ถ้าใช้คนละไฟล์ ให้ระบุ connection name ใหม่ใน secrets)
 conn = st.connection("gsheets", type=GSheetsConnection)
