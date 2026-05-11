@@ -27,18 +27,38 @@ BRANCH_LIST = [
     "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
     "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
 ]
-# --- Sidebar: ส่วนเพิ่มอุปกรณ์ใหม่ ---
-st.sidebar.markdown("### 🆕 เพิ่มประเภทอุปกรณ์ใหม่")
-new_sheet_name = st.sidebar.text_input("ระบุชื่ออุปกรณ์ใหม่ (ต้องตรงกับชื่อ Tab ใน Google Sheet):")
-if st.sidebar.button("➕ เพิ่มเข้าในระบบ"):
-    if new_sheet_name and new_sheet_name not in st.session_state.available_sheets:
-        st.session_state.available_sheets.append(new_sheet_name)
-        st.sidebar.success(f"เพิ่ม '{new_sheet_name}' เรียบร้อย!")
+# --- ส่วนที่ 1: การจัดการรายชื่อ Worksheet และการเพิ่มหน้าใหม่ ---
+if 'available_sheets' not in st.session_state:
+    st.session_state.available_sheets = AVAILABLE_SHEETS.copy()
+
+st.sidebar.markdown("### 🆕 เพิ่มอุปกรณ์ใหม่")
+new_device = st.sidebar.text_input("ระบุชื่ออุปกรณ์ใหม่:", placeholder="เช่น Scanner, Hub...")
+
+if st.sidebar.button("➕ สร้าง Worksheet ใน Google Sheets"):
+    if new_device:
+        if new_device not in st.session_state.available_sheets:
+            try:
+                # สร้าง DataFrame เปล่าที่มีเฉพาะ Header เพื่อใช้สร้าง Sheet ใหม่
+                #
+                new_sheet_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
+                
+                # ส่งคำสั่งสร้าง Worksheet ใหม่พร้อมข้อมูล Header
+                conn.create(worksheet=new_device, data=new_sheet_df)
+                
+                # เพิ่มชื่อเข้าในรายการของหน้าเว็บ
+                st.session_state.available_sheets.append(new_device)
+                st.sidebar.success(f"✅ สร้างหน้า '{new_device}' สำเร็จ!")
+                st.rerun()
+            except Exception as e:
+                st.sidebar.error(f"❌ ไม่สามารถสร้างได้: {e}")
+        else:
+            st.sidebar.warning("⚠️ ชื่ออุปกรณ์นี้มีอยู่ในระบบแล้ว")
     else:
-        st.sidebar.warning("กรุณาระบุชื่อหรือชื่อนี้มีอยู่แล้ว")
-        
+        st.sidebar.warning("⚠️ กรุณากรอกชื่ออุปกรณ์")
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📁 เมนูจัดการข้อมูล")
+# เปลี่ยนมาใช้รายการจาก session_state
 selected_sheet = st.sidebar.selectbox("เลือก Worksheet:", st.session_state.available_sheets)
 
 def convert_df(df_to_convert):
