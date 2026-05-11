@@ -131,33 +131,75 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม"
                 conn.update(worksheet=selected_sheet, data=df)
                 st.rerun()
 
-# --- 6. แก้ไขและลบแถว ---
+# --- 6. แก้ไขและลบแถว (ปรับปรุงให้แก้ไขได้ครบทุกคอลัมน์) ---
 if not df.empty:
     with st.expander("📝 แก้ไข หรือ ลบรายการ"):
+        # เลือกรายการที่จะจัดการจาก Serial เครื่องที่เสีย
         sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial:", sn_list)
+        sel_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่ต้องการจัดการ:", sn_list)
+        
+        # ดึง Index และข้อมูลแถวนั้นมา
         idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
         row = df.loc[idx]
 
-        with st.form("edit_form"):
-            e1, e2 = st.columns(2)
-            with e1:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_sn_c = st.text_input("Serial ส่งศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                new_sn_n = st.text_input("Serial เครื่องใหม่", value=str(row["Serial เครื่องที่เปลี่ยนใหม่"]))
+        with st.form("edit_full_form"):
+            st.markdown(f"### กำลังแก้ไขข้อมูลของ Serial: {sel_sn}")
+            e1, e2, e3 = st.columns(3)
             
-            b1, b2 = st.columns(2)
-            if b1.form_submit_button("💾 อัปเดต"):
-                df.at[idx, "สาขา"], df.at[idx, "สถานะ"] = new_b, new_s
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"], df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_c, new_sn_n
-                conn.update(worksheet=selected_sheet, data=df.astype(str))
-                st.rerun()
-            if b2.form_submit_button("🗑️ ลบรายการนี้"):
-                conn.update(worksheet=selected_sheet, data=df.drop(idx).astype(str))
-                st.rerun()
+            with e1:
+                # 1. วันที่รับแจ้ง
+                new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
+                # 2. วันที่ส่งเคลม (ใช้ date_input เพื่อความสะดวก)
+                try: curr_d_clm = datetime.strptime(str(row["วันที่ส่งเคลม"]), "%Y-%m-%d")
+                except: curr_d_clm = None
+                new_d_clm = st.date_input("วันที่ส่งเคลม", value=curr_d_clm)
+                # 3. วันทีนำไปติดตั้งใหม่
+                try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
+                except: curr_d_ins = None
+                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
 
+            with e2:
+                # 4. สาขา
+                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
+                # 5. Counter
+                new_c = st.text_input("Counter", value=str(row["counter"]))
+                # 6. Serial เครื่องที่เสีย (หากแก้ตัวนี้ ระบบจะอัปเดตค่าใหม่ลงไป)
+                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
+
+            with e3:
+                # 7. Serial เครื่องที่ส่งให้ศูนย์
+                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
+                # 8. Serial เครื่องที่เปลี่ยนใหม่
+                new_sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่", value=str(row["Serial เครื่องที่เปลี่ยนใหม่"]))
+                # 9. สถานะ
+                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
+            
+            st.divider()
+            b1, b2 = st.columns(2)
+            
+            if b1.form_submit_button("💾 บันทึกการแก้ไขทั้งหมด"):
+                # อัปเดตค่าลงใน DataFrame ตัวหลัก (บังคับเป็น object เพื่อไม่ให้ติดเรื่อง Dtype)
+                df = df.astype(object)
+                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
+                df.at[idx, "วันที่ส่งเคลม"] = new_d_clm.strftime("%Y-%m-%d") if new_d_clm else ""
+                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
+                df.at[idx, "สาขา"] = new_b
+                df.at[idx, "counter"] = new_c
+                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
+                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
+                df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_new
+                df.at[idx, "สถานะ"] = new_s
+                
+                # ส่งข้อมูลกลับไปที่ Google Sheets
+                conn.update(worksheet=selected_sheet, data=df.astype(str))
+                st.success("✅ อัปเดตข้อมูลทั้ง 9 คอลัมน์เรียบร้อยแล้ว!")
+                st.rerun()
+                
+            if b2.form_submit_button("🗑️ ลบรายการนี้ออก"):
+                df_dropped = df.drop(idx)
+                conn.update(worksheet=selected_sheet, data=df_dropped.astype(str))
+                st.warning(f"ลบรายการ {sel_sn} ออกแล้ว")
+                st.rerun()
 # --- 7. ตารางค้นหา ---
 st.divider()
 st.subheader("🔍 ค้นหาข้อมูล")
