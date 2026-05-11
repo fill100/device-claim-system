@@ -28,7 +28,6 @@ with st.sidebar:
     st.page_link("app.py", label="JVFS Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Wesgan Asset System", icon="🛡️")
     st.divider()
-    st.caption("v1.3.0 | Asset Management Mode")
 
 # 5. ดึงข้อมูลจาก Google Sheets
 try:
