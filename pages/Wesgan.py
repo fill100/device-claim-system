@@ -25,8 +25,8 @@ ASSET_COLUMNS = [
 # 4. Sidebar เมนูสลับหน้า
 with st.sidebar:
     st.markdown("# 🎮 IT Management")
-    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Wesgan Asset System", icon="🛡️")
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.divider()
 
 # 5. ดึงข้อมูลจาก Google Sheets
