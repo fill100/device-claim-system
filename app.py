@@ -9,7 +9,7 @@ st.markdown("""
 
 # จากนั้นค่อยเขียน Sidebar ในแบบที่เราต้องการ
 with st.sidebar:
-    st.markdown("# 🎮 IT Management")
+    st.markdown("# 💻 IT Management")
     st.page_link("app.py", label="JVFS Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
     st.divider()
