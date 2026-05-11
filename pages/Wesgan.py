@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
+st.set_page_config(page_title=" Asset Management", layout="wide")
 
 # ซ่อนเมนูเดิมของ Streamlit เพื่อใช้ Sidebar ที่เราแต่งเอง
 st.markdown("""
