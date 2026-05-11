@@ -14,7 +14,6 @@ with st.sidebar:
     st.page_link("app.py", label="JVFS Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
     st.divider()
-    st.caption("v1.2.0 | Developed by IT Team")
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
