@@ -1,4 +1,22 @@
 import streamlit as st
+# โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;} /* ซ่อนเมนูเดิมที่ชื่อ app/Wesgan */
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
+
+# จากนั้นค่อยเขียน Sidebar ในแบบที่เราต้องการ
+with st.sidebar:
+    st.markdown("# 🎮 IT Management")
+    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Wesgan System", icon="🛡️")
+    st.divider()
+    st.caption("v1.2.0 | Developed by IT Team")
+from streamlit_gsheets import GSheetsConnection
+import pandas as pd
+from datetime import datetime
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
