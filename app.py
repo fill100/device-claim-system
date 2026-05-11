@@ -105,28 +105,77 @@ if q:
     view = view[mask]
 st.dataframe(view, use_container_width=True, hide_index=True)
 
-# --- ส่วนที่ 4: แก้ไขสถานะ (ตัด Pending ออกจากตัวเลือก) ---
+# --- ส่วนที่ 4: แก้ไขสถานะ / อัปเดตข้อมูล (ปรับปรุงตามคำขอ) ---
 if not view.empty:
-    with st.expander("📝 อัปเดตสถานะ/ข้อมูล"):
+    with st.expander("📝 อัปเดตสถานะ/ข้อมูล (แก้ไขข้อมูลรายละเอียด)"):
+        # สร้างรายการ Serial ให้เลือก เพื่อดึงข้อมูลแถวนั้นมาแก้ไข
         sn_list = view["Serial เครื่องที่เสีย"].astype(str).unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่จะแก้ไข", sn_list)
-        row = df[df["Serial เครื่องที่เสีย"].astype(str) == sel_sn].iloc[0]
+        sel_sn = st.selectbox("เลือก Serial เครื่องที่เสีย ที่ต้องการแก้ไขข้อมูล:", sn_list)
         
-        with st.form("edit_form"):
-            e1, e2 = st.columns(2)
-            with e1:
-                curr_st = str(row["สถานะ"]).strip().lower()
-                opts = ["inprogress", "done"]
-                idx = opts.index(curr_st) if curr_st in opts else 0
-                new_st = st.selectbox("เปลี่ยนสถานะ", ["inprogress", "Done"], index=idx)
-            with e2:
-                new_center = st.text_input("Serial ส่งศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
+        # ดึงข้อมูลปัจจุบันจาก DataFrame
+        row = df[df["Serial เครื่องที่เสีย"].astype(str) == sel_sn].iloc[0]
+        target_idx = df.index[df["Serial เครื่องที่เสีย"].astype(str) == sel_sn].tolist()[0]
+        
+        with st.form("edit_form_comprehensive"):
+            col_a, col_b = st.columns(2)
             
-            if st.form_submit_button("ยืนยันการแก้ไข"):
-                target_idx = df.index[df["Serial เครื่องที่เสีย"].astype(str) == sel_sn].tolist()[0]
-                df.at[target_idx, "สถานะ"] = new_st
-                df.at[target_idx, "Serial เครื่องที่ส่งให้ศูนย์ทดแทนของเดิม"] = new_center
+            with col_a:
+                # 1. วันที่รับแจ้ง (แสดงค่าเดิมและให้เลือกใหม่)
+                try:
+                    curr_date_rec = datetime.strptime(str(row["วันที่รับแจ้ง"]), "%Y-%m-%d %H:%M")
+                except:
+                    curr_date_rec = datetime.now()
+                new_date_rec = st.date_input("วันที่รับแจ้ง", value=curr_date_rec)
+                
+                # 2. วันที่ส่งเคลม
+                try:
+                    curr_date_claim = datetime.strptime(str(row["วันที่ส่งเคลม"]), "%Y-%m-%d")
+                except:
+                    curr_date_claim = None
+                new_date_claim = st.date_input("วันที่ส่งเคลม", value=curr_date_claim)
+                
+                # 3. วันที่นำไปติดตั้งใหม่
+                try:
+                    curr_date_inst = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
+                except:
+                    curr_date_inst = None
+                new_date_inst = st.date_input("วันทีนำไปติดตั้งใหม่", value=new_date_inst)
+
+                # 4. สาขา
+                branches = ["One Bangkok", "กรุงเทพฯ 1", "กรุงเทพฯ 2", "นนทบุรี", "สมุทรสาคร", "เชียงใหม่", "ตาก", "สงขลา", "มุกดาหาร", "ชลบุรี"]
+                curr_branch = str(row["สาขา"]).strip()
+                b_idx = branches.index(curr_branch) if curr_branch in branches else 0
+                new_branch = st.selectbox("สาขา", branches, index=b_idx)
+
+            with col_b:
+                # 5. Counter
+                new_counter = st.text_input("Counter", value=str(row["counter"]))
+                
+                # 6. Serial เครื่องที่เสีย
+                new_sn_fault = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
+                
+                # 7. Serial เครื่องที่ส่งให้ศูนย์ทดแทนของเดิม (เปลี่ยนชื่อตามคำขอ)
+                new_sn_center = st.text_input("Serial เครื่องที่ส่งให้ศูนย์ทดแทนของเดิม", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
+                
+                # 8. สถานะ (In Progress / Done)
+                curr_st = str(row["สถานะ"]).strip().lower()
+                st_opts = ["inprogress", "done"]
+                s_idx = st_opts.index(curr_st) if curr_st in st_opts else 0
+                new_status = st.selectbox("สถานะ", ["inprogress", "Done"], index=s_idx)
+
+            if st.form_submit_button("💾 ยืนยันการอัปเดตข้อมูลทั้งหมด"):
+                # อัปเดตค่าลงใน DataFrame
+                df.at[target_idx, "วันที่รับแจ้ง"] = new_date_rec.strftime("%Y-%m-%d %H:%M")
+                df.at[target_idx, "วันที่ส่งเคลม"] = new_date_claim.strftime("%Y-%m-%d") if new_date_claim else ""
+                df.at[target_idx, "วันทีนำไปติดตั้งใหม่"] = new_date_inst.strftime("%Y-%m-%d") if new_date_inst else ""
+                df.at[target_idx, "สาขา"] = new_branch
+                df.at[target_idx, "counter"] = new_counter
+                df.at[target_idx, "Serial เครื่องที่เสีย"] = new_sn_fault
+                df.at[target_idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_center
+                df.at[target_idx, "สถานะ"] = new_status
+                
+                # บันทึกลง Google Sheets
                 conn.update(worksheet=selected_sheet, data=df)
-                st.success("อัปเดตเรียบร้อย!")
+                st.success("✅ อัปเดตข้อมูลเรียบร้อยแล้ว!")
                 st.rerun()
                 
