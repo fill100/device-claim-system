@@ -1,11 +1,10 @@
+import streamlit as st  # <--- ต้องมีบรรทัดนี้!
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
-from streamlit_gsheets import GSheetsConnection
-import pandas as pd
-from datetime import datetime
-# 1. Page Config
-st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
+
+# จากนั้นค่อยตามด้วยบรรทัดที่ 8 ที่เกิด Error
+st.set_page_config(page_title="Asset Management", layout="wide")
 
 # ซ่อนเมนูเดิม
 st.markdown("<style>[data-testid='stSidebarNav'] {display: none;}</style>", unsafe_allow_html=True)
