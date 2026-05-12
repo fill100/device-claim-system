@@ -21,11 +21,10 @@ ASSET_COLUMNS = ["AssetCode", "Serial", "ModelName", "AssetTypeName", "BrandName
 
 # 4. Sidebar
 with st.sidebar:
-    st.markdown("# 🎮 IT Management")
+    st.markdown("# 💻 IT Management")
     st.page_link("app.py", label="Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.divider()
-    st.caption("v1.4.0 | Single File Mode")
 
 # 5. ดึงข้อมูลจาก Tab ชื่อ "Wesgan"
 try:
