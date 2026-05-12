@@ -51,50 +51,48 @@ if filter_model != "ทั้งหมด":
 # 6. UI หลัก
 st.title("🛡️ Asset Management")
 
-# --- ส่วนของการแก้ไขข้อมูล (State Management) ---
-if "edit_index" not in st.session_state:
-    st.session_state.edit_index = None
-
-# ฟังก์ชันสำหรับรีเซ็ตฟอร์ม
-def reset_edit():
-    st.session_state.edit_index = None
-    st.rerun()
+# --- ส่วนจัดการ State (วางไว้ด้านบนๆ ของไฟล์) ---
+if "edit_data" not in st.session_state:
+    st.session_state.edit_data = None
+if "row_index" not in st.session_state:
+    st.session_state.row_index = None
 
 # --- ฟอร์มลงทะเบียน / แก้ไข ---
-expander_label = "📝 แก้ไขข้อมูลทรัพย์สิน" if st.session_state.edit_index is not None else "➕ ลงทะเบียนทรัพย์สินใหม่"
-with st.expander(expander_label, expanded=(st.session_state.edit_index is not None)):
-    with st.form("asset_form", clear_on_submit=True):
-        # ดึงค่าเริ่มต้นถ้าอยู่ในโหมดแก้ไข
-        default_val = {"sn": "", "model": "", "loc": "", "date": datetime.now()}
-        if st.session_state.edit_index is not None:
-            row = df.iloc[st.session_state.edit_index]
-            default_val["sn"] = row["Serial Number (เลขซีเรียล)"]
-            default_val["model"] = row["Model Name (ชื่อรุ่น)"]
-            default_val["loc"] = row["Location (สถานที่)"]
-            try:
-                default_val["date"] = datetime.strptime(row["วันที่ซื้อ"], "%d-%m-%Y")
-            except:
-                default_val["date"] = datetime.now()
+# ตรวจสอบว่ากำลังแก้ไขอยู่หรือไม่
+is_editing = st.session_state.edit_data is not None
+expander_label = "📝 กำลังแก้ไขข้อมูล" if is_editing else "➕ ลงทะเบียนทรัพย์สินใหม่"
 
+with st.expander(expander_label, expanded=is_editing):
+    with st.form("asset_form", clear_on_submit=True):
+        # ดึงค่าจาก State มาใส่ในช่องกรอก
+        edit_val = st.session_state.edit_data if is_editing else {}
+        
         col1, col2 = st.columns(2)
         with col1:
-            input_sn = st.text_input("Serial Number (เลขซีเรียล)", value=default_val["sn"])
-            input_model = st.text_input("Model Name (ชื่อรุ่น)", value=default_val["model"])
+            input_sn = st.text_input("Serial Number", value=edit_val.get("Serial Number (เลขซีเรียล)", ""))
+            input_model = st.text_input("Model Name", value=edit_val.get("Model Name (ชื่อรุ่น)", ""))
         with col2:
-            input_loc = st.text_input("Location (สถานที่)", value=default_val["loc"])
-            input_date = st.date_input("วันที่ซื้อ", value=default_val["date"], format="DD/MM/YYYY")
+            input_loc = st.text_input("Location", value=edit_val.get("Location (สถานที่)", ""))
+            # จัดการวันที่ให้รองรับทั้ง string และ date object
+            try:
+                curr_date = datetime.strptime(edit_val.get("วันที่ซื้อ"), "%d-%m-%Y") if is_editing else datetime.now()
+            except:
+                curr_date = datetime.now()
+            input_date = st.date_input("วันที่ซื้อ", value=curr_date, format="DD/MM/YYYY")
         
-        btn_col1, btn_col2 = st.columns([1, 5])
+        btn_col1, btn_col2 = st.columns([1, 4])
         with btn_col1:
             submit = st.form_submit_button("💾 บันทึก")
         with btn_col2:
-            if st.session_state.edit_index is not None:
-                if st.form_submit_button("❌ ยกเลิกแก้ไข"):
-                    reset_edit()
+            if is_editing:
+                if st.form_submit_button("❌ ยกเลิก"):
+                    st.session_state.edit_data = None
+                    st.session_state.row_index = None
+                    st.rerun()
 
         if submit:
             if input_sn:
-                new_data = {
+                updated_row = {
                     "Serial Number (เลขซีเรียล)": str(input_sn),
                     "Model Name (ชื่อรุ่น)": str(input_model),
                     "Location (สถานที่)": str(input_loc),
@@ -102,24 +100,51 @@ with st.expander(expander_label, expanded=(st.session_state.edit_index is not No
                 }
                 
                 try:
-                    if st.session_state.edit_index is not None:
-                        # กรณีแก้ไข: แทนที่บรรทัดเดิม
-                        df.iloc[st.session_state.edit_index] = new_data
+                    if is_editing:
+                        # แก้ไขตาม Index จริงที่เก็บไว้ใน State
+                        df.iloc[st.session_state.row_index] = updated_row
                         msg = "อัปเดตข้อมูลสำเร็จ!"
                     else:
-                        # กรณีเพิ่มใหม่: ต่อท้าย
-                        new_row = pd.DataFrame([new_data])
-                        df = pd.concat([df, new_row], ignore_index=True)
+                        # เพิ่มใหม่
+                        new_df = pd.DataFrame([updated_row])
+                        df = pd.concat([df, new_df], ignore_index=True)
                         msg = "บันทึกข้อมูลใหม่สำเร็จ!"
                     
                     conn.update(worksheet="Asset Management", data=df.astype(str))
                     st.success(msg)
-                    st.session_state.edit_index = None
+                    # ล้างค่าหลังบันทึกเสร็จ
+                    st.session_state.edit_data = None
+                    st.session_state.row_index = None
                     st.rerun()
                 except Exception as e:
-                    st.error(f"เกิดข้อผิดพลาด: {e}")
+                    st.error(f"Error: {e}")
             else:
-                st.error("กรุณาระบุ Serial Number")
+                st.error("กรุณากรอก Serial Number")
+
+# --- ส่วนตารางแสดงผล ---
+st.divider()
+# เพิ่มการค้นหาและตัวกรองตามปกติ...
+
+# แก้ไขส่วนการเลือกแถว (ป้องกันการกระพริบไม่หยุด)
+event = st.dataframe(
+    view_df, 
+    use_container_width=True, 
+    hide_index=False,
+    on_select="rerun",
+    selection_mode="single-row"
+)
+
+# ตรวจสอบการเลือก (คัดกรองเฉพาะเมื่อมีการคลิกใหม่จริงๆ)
+if event.selection.rows:
+    selected_idx = event.selection.rows[0]
+    # หาตำแหน่งจริงใน Google Sheets (สำคัญมาก)
+    actual_idx = view_df.index[selected_idx]
+    
+    # เก็บค่าเข้า State เฉพาะเมื่อข้อมูลเปลี่ยน เพื่อลดการกระพริบ
+    if st.session_state.row_index != actual_idx:
+        st.session_state.row_index = actual_idx
+        st.session_state.edit_data = df.iloc[actual_idx].to_dict()
+        st.rerun()
 
 # --- ส่วน Report & Search ---
 st.divider()
