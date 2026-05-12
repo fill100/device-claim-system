@@ -29,9 +29,9 @@ ASSET_COLUMNS = [
 
 # 4. Sidebar Custom Navigation
 with st.sidebar:
-    st.markdown("# 🎮 IT Management")
-    st.page_link("app.py", label="JVFS Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Wesgan Asset System", icon="🛡️")
+    st.markdown("# 💻 IT Management")
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.divider()
     st.caption("v1.3.0 | Wesgan Database")
 
