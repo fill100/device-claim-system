@@ -40,40 +40,44 @@ except:
     df = pd.DataFrame(columns=ASSET_COLUMNS)
 
 # 6. UI หลัก
-st.title("🛡️ Wesgan Asset Management")
+st.title("🛡️  Asset Management")
 
-# --- ส่วนลงทะเบียนใหม่ ---
+# --- ส่วนลงทะเบียนใหม่ (ปรับเหลือ 3 ช่องตามคำขอ) ---
 with st.expander("➕ ลงทะเบียนทรัพย์สินใหม่"):
     with st.form("add_asset_form", clear_on_submit=True):
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            input_sn = st.text_input("Serial Number")
-        with c2:
-            input_model = st.text_input("ModelName")
-        with c3:
-            input_loc = st.text_input("LocationName")
+        # 1. สร้างช่องกรอกแค่ 3 อย่าง
+        input_sn = st.text_input("Serial Number (เลขซีเรียล)")
+        input_loc = st.text_input("Location (สถานที่)")
+        input_date = st.date_input("วันที่ซื้อ", value=datetime.now())
         
-        d1, d2 = st.columns(2)
-        input_date = d1.date_input("PurchaseDate")
-        input_price = d2.text_input("PurchasePrice", value="0")
+        # ปุ่มบันทึก
+        submit = st.form_submit_button("💾 บันทึกข้อมูล")
 
-        if st.form_submit_button("💾 บันทึกข้อมูล"):
-            if input_code:
+        if submit:
+            # เช็คว่าอย่างน้อยต้องกรอก Serial Number
+            if input_sn:
+                # 2. สร้างข้อมูลใหม่ (ส่วนที่ไม่ได้กรอกจะปล่อยว่างไว้เพื่อให้ตรงกับหัวตารางเดิม)
                 new_row = pd.DataFrame([{
+                    "AssetCode": "",           # ปล่อยว่าง
                     "Serial": str(input_sn),
-                    "ModelName": str(input_model),
+                    "ModelName": "",           # ปล่อยว่าง
+                    "AssetTypeName": "",       # ปล่อยว่าง
+                    "BrandName": "",           # ปล่อยว่าง
                     "LocationName": str(input_loc),
                     "PurchaseDate": input_date.strftime("%Y-%m-%d"),
-                    "PurchasePrice": str(input_price)
+                    "PurchasePrice": ""        # ปล่อยว่าง
                 }])
                 
-                df_updated = pd.concat([df, new_row], ignore_index=True).astype(str)
-                # บันทึกกลับไปที่ Tab "Wesgan"
-                conn.update(worksheet="Wesgan", data=df_updated)
-                st.success(f"บันทึกรหัส {input_code} สำเร็จ!")
-                st.rerun()
+                # 3. รวมข้อมูลและบันทึกไปที่ Tab "Wesgan"
+                try:
+                    df_updated = pd.concat([df, new_row], ignore_index=True).astype(str)
+                    conn.update(worksheet="Wesgan", data=df_updated)
+                    st.success(f"บันทึกข้อมูล Serial: {input_sn} เรียบร้อยแล้ว!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
             else:
-                st.error("กรุณาระบุ AssetCode")
+                st.error("กรุณาระบุ Serial Number ก่อนบันทึกครับ")
 
 # --- ตารางแสดงผล ---
 st.divider()
