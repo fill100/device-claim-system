@@ -17,7 +17,7 @@ except Exception as e:
     st.stop()
 
 # 3. กำหนดหัวข้อคอลัมน์
-ASSET_COLUMNS = ["AssetCode", "Serial", "ModelName", "AssetTypeName", "BrandName", "LocationName", "PurchaseDate", "PurchasePrice"]
+ASSET_COLUMNS = ["Serial number","Location","วันที่ซื้อ"]
 
 # 4. Sidebar
 with st.sidebar:
