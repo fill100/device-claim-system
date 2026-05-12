@@ -132,17 +132,15 @@ with c1:
         view_df = view_df[mask]
 
 with c2:
-    # ปุ่มดึง Report เป็น Excel
+    # ปุ่มดึง Report เป็น CSV (ไม่ต้องลง xlsxwriter เพิ่ม)
     st.write("📊 Report")
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-        view_df.to_excel(writer, index=False, sheet_name='Report')
+    csv = view_df.to_csv(index=False).encode('utf-8-sig') # utf-8-sig เพื่อให้ภาษาไทยไม่ต่าง
     
     st.download_button(
-        label="📥 Download Excel",
-        data=buffer.getvalue(),
-        file_name=f"Asset_Report_{datetime.now().strftime('%Y%m%d')}.xlsx",
-        mime="application/vnd.ms-excel",
+        label="📥 Download CSV",
+        data=csv,
+        file_name=f"Asset_Report_{datetime.now().strftime('%Y%m%d')}.csv",
+        mime="text/csv",
         use_container_width=True
     )
 
