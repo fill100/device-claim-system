@@ -11,7 +11,7 @@ st.markdown("<style>[data-testid='stSidebarNav'] {display: none;}</style>", unsa
 
 # ในไฟล์ Wesgan.py บรรทัดที่ 16-20 ควรเป็นแบบนี้:
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection) # ใช้ชื่อ "gsheets"
+    conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception as e:
     st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
     st.stop()
