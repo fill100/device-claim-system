@@ -9,9 +9,9 @@ st.set_page_config(page_title="Wesgan Asset Management", layout="wide")
 # ซ่อนเมนูเดิม
 st.markdown("<style>[data-testid='stSidebarNav'] {display: none;}</style>", unsafe_allow_html=True)
 
-# 2. เชื่อมต่อ (กลับไปใช้ชื่อการเชื่อมต่อหลัก 'gsheets' ที่เคยใช้งานได้)
+# ในไฟล์ Wesgan.py บรรทัดที่ 16-20 ควรเป็นแบบนี้:
 try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
+    conn = st.connection("gsheets", type=GSheetsConnection) # ใช้ชื่อ "gsheets"
 except Exception as e:
     st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
     st.stop()
