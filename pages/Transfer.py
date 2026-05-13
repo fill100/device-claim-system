@@ -82,15 +82,21 @@ def create_transfer_pdf(data):
     # เนื้อหาตาราง
     pdf.set_font('THSarabun', '', 14)
     for i, item in enumerate(data['items'], 1):
+        # เก็บค่าตำแหน่ง Y ปัจจุบันไว้ก่อนวาดแถว
+        curr_y = pdf.get_y()
+        
+        # วาด 3 ช่องแรก (ใช้ cell ปกติ แต่ต้องวาดกรอบทีหลังเพื่อให้ความสูงเท่ากัน)
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
         pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
-        
-        model_text = str(item.get('model', '-'))[:35]
+        model_text = str(item.get('model', '-'))[:40]
         pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
         
-        # ใส่หมายเหตุเฉพาะบรรทัดแรก
+        # --- ส่วนหมายเหตุ: ใช้ multi_cell เพื่อให้คำไม่ขาด ---
         note_text = data.get('reason', '') if i == 1 else ""
-        pdf.cell(w_note, h_cell, f" {note_text[:30]}", 1, 1, "L")
+        
+        # วาด multi_cell ในช่องสุดท้าย
+        # หมายเหตุ: multi_cell จะทำให้ตำแหน่ง Y ขยับลงไปเองอัตโนมัติ
+        pdf.multi_cell(w_note, h_cell, f" {note_text}", border=1, align="L")
     
     pdf.ln(5)
     pdf.set_font('THSarabun', 'B', 11)
