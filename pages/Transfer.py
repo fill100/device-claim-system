@@ -67,11 +67,15 @@ def create_transfer_pdf(data):
     pdf.ln(5)
 
     # --- 3. ตารางรายการอุปกรณ์ ---
-    pdf.set_font('THSarabun', 'B', 14)
+pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     
-    w_no, w_sn, w_name, w_note = 15, 55, 45, 65
-    h_cell = 15
+    # ปรับสัดส่วนใหม่ (รวมกันได้ 190 มม. เหมือนเดิม)
+    w_no = 12      # ลำดับ (แคบลงหน่อย)
+    w_sn = 48      # Serial Number
+    w_name = 55    # รายการอุปกรณ์
+    w_note = 75    # หมายเหตุ (ขยายให้กว้างสะใจ)
+    h_cell = 10
 
     # หัวตาราง
     pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
@@ -79,24 +83,20 @@ def create_transfer_pdf(data):
     pdf.cell(w_name, h_cell, "รายการ/รุ่นอุปกรณ์", 1, 0, "C", True)
     pdf.cell(w_note, h_cell, "หมายเหตุ", 1, 1, "C", True)
 
-    # เนื้อหาตาราง
+    # เนื้อหาตาราง (Loop ที่คุณหาอยู่)
     pdf.set_font('THSarabun', '', 14)
     for i, item in enumerate(data['items'], 1):
-        # เก็บค่าตำแหน่ง Y ปัจจุบันไว้ก่อนวาดแถว
-        curr_y = pdf.get_y()
-        
-        # วาด 3 ช่องแรก (ใช้ cell ปกติ แต่ต้องวาดกรอบทีหลังเพื่อให้ความสูงเท่ากัน)
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
         pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
-        model_text = str(item.get('model', '-'))[:40]
+        
+        # ตัดชื่อรุ่นให้สั้นลงนิดนึงเพื่อประหยัดพื้นที่
+        model_text = str(item.get('model', '-'))[:30]
         pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
         
-        # --- ส่วนหมายเหตุ: ใช้ multi_cell เพื่อให้คำไม่ขาด ---
+        # ช่องหมายเหตุ: แสดงข้อความทั้งหมด (เอา [:30] ออกแล้ว)
+        # ใช้ ln=1 เพื่อขึ้นบรรทัดใหม่อย่างถูกต้อง
         note_text = data.get('reason', '') if i == 1 else ""
-        
-        # วาด multi_cell ในช่องสุดท้าย
-        # หมายเหตุ: multi_cell จะทำให้ตำแหน่ง Y ขยับลงไปเองอัตโนมัติ
-        pdf.multi_cell(w_note, h_cell, f" {note_text}", border=1, align="L")
+        pdf.cell(w_note, h_cell, f" {note_text}", 1, 1, "L")
     
     pdf.ln(5)
     pdf.set_font('THSarabun', 'B', 11)
