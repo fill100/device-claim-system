@@ -61,40 +61,36 @@ with st.container(border=True):
 from fpdf import FPDF
 import io
 
-# --- ฟังก์ชันสร้าง PDF (เวอร์ชัน fpdf2) ---
 def create_pdf(data):
-    # ใช้ fpdf2 แทน
     pdf = FPDF()
     pdf.add_page()
     
-    # ตั้งค่า Font มาตรฐาน (Arial) - จะใช้ได้เฉพาะภาษาอังกฤษ
+    # --- เนื้อหา PDF (เหมือนเดิม) ---
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Asset Transfer Request Form", 0, 1, "C")
     pdf.ln(5)
     
-    # ส่วนข้อมูลทรัพย์สิน
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 10, "Asset Details", 0, 1)
     
     pdf.set_font("Arial", "", 10)
-    # ใช้ .encode('latin-1', 'replace') เพื่อป้องกันเครื่องหมายแปลกๆ ทำ Error
+    # ฟังก์ชันช่วยล้างค่าภาษาไทยเพื่อป้องกัน Error
     def clean_text(text):
         return str(text).encode('ascii', 'ignore').decode('ascii')
 
     pdf.cell(0, 8, f"S/N: {clean_text(data['sn'])}", 0, 1)
     pdf.cell(0, 8, f"Model: {clean_text(data['model'])}", 0, 1)
     pdf.cell(0, 8, f"To: {clean_text(data['to_loc'])}", 0, 1)
-    pdf.ln(5)
+    pdf.ln(10)
 
-    # ตารางลายเซ็น (สร้างเป็นช่องว่างไว้ให้เซ็นด้วยมือ)
+    # ตารางลายเซ็น (สร้างเป็นช่องว่าง)
     pdf.set_font("Arial", "B", 10)
     col_w = 63
     pdf.cell(col_w, 10, "1. Sender", 1, 0, "C")
     pdf.cell(col_w, 10, "2. Receiver", 1, 0, "C")
     pdf.cell(col_w, 10, "3. Mover", 1, 1, "C")
     
-    # ช่องว่างสำหรับเซ็น (Signature Spaces)
-    for _ in range(2): # สร้าง 2 แถว (พนักงาน และ หัวหน้า)
+    for _ in range(2): 
         pdf.cell(col_w, 30, "", 1, 0)
         pdf.cell(col_w, 30, "", 1, 0)
         pdf.cell(col_w, 30, "", 1, 1)
@@ -104,10 +100,8 @@ def create_pdf(data):
         pdf.cell(col_w, 5, "Signature & Date", 0, 1, "C")
         pdf.ln(5)
 
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 10, f"Reference: {data['sn']}-{data['date_ref']}", 0, 0, "R")
-    
-    # ส่งออกแบบ Bytes โดยตรง (fpdf2 ใช้ output() ได้เลย)
+    # --- จุดที่แก้ไข: การส่งออกไฟล์เป็น Bytes ---
+    # fpdf2.output() ถ้าไม่ระบุชื่อไฟล์ มันจะคืนค่าเป็น bytearray/bytes
     return pdf.output()
 
 # --- ส่วนของปุ่ม ---
@@ -120,12 +114,15 @@ if st.button("📥 ออกใบโอนย้าย (PDF)"):
         "date_ref": now_th.strftime('%Y%m%d')
     }
     
-    # สร้าง PDF
-    pdf_bytes = create_pdf(data_to_pdf)
+    # สร้าง PDF และแปลงเป็น bytes ให้ชัวร์
+    pdf_data = create_pdf(data_to_pdf)
+    
+    # แปลง bytearray เป็น bytes เพื่อให้ Streamlit download_button ยอมรับ
+    pdf_bytes = bytes(pdf_data) 
     
     st.download_button(
-        label="Download Transfer Form",
-        data=pdf_bytes,
+        label="Click here to Download PDF",
+        data=pdf_bytes,  # ส่ง bytes เข้าไปตรงๆ
         file_name=f"Transfer_{target_sn}.pdf",
         mime="application/pdf"
     )
