@@ -46,7 +46,7 @@ def create_transfer_pdf(data):
     
     pdf.ln(10)
     pdf.set_font('THSarabun', 'B', 18)
-    pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน", 0, 1, "C")
+    pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน IT", 0, 1, "C")
     pdf.set_font('THSarabun', '', 14)
     pdf.cell(0, 8, f"วันที่ดำเนินการ: {data['date']}", 0, 1, "R")
 
