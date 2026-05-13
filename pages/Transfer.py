@@ -154,14 +154,13 @@ if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
         now_th = datetime.now() + timedelta(hours=7)
         pdf_data = {
             "date": now_th.strftime('%d/%m/%Y'),
-            "receiver": s2,
-            "sender": s1,
-            "manager": m3,
+            "items": selected_items,
             "to_loc": to_location,
-            "sn": target_sn,
-            "model": asset_info['Model Name (ชื่อรุ่น)'],
             "reason": transfer_reason,
-            "date_ref": now_th.strftime('%Y%m%d')
+            "sender_name": s_old,    
+            "receiver_name": s_new,  
+            "it_staff": it_staff      
+        }
         }
         
         # สร้าง PDF และบันทึกเข้า session
