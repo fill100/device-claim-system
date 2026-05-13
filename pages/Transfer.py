@@ -98,7 +98,6 @@ def create_transfer_pdf(data):
     def txt(thai, eng):
         return thai if font_main == 'THSarabun' else eng
     
-    # หัวข้อเอกสาร (ตามสไตล์รูป 576ca1)
     pdf.set_font(font_main, 'B', 22)
     pdf.cell(0, 15, "แบบฟอร์มการโอนย้ายทรัพย์สินแผนก IT", 0, 1, "C")
     
