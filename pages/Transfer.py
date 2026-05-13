@@ -58,71 +58,105 @@ with st.container(border=True):
         s3 = st.text_input("ชื่อผู้ขนย้าย", placeholder="ผู้เคลื่อนย้าย")
         m3 = st.text_input("ชื่อหัวหน้าผู้ขนย้าย", placeholder="ผู้อนุมัติการเคลื่อนย้าย")
 
-from fpdf import FPDF
-import io
-
-def create_pdf(data):
-    pdf = FPDF()
-    pdf.add_page()
-    
-    # --- เนื้อหา PDF (เหมือนเดิม) ---
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Asset Transfer Request Form", 0, 1, "C")
-    pdf.ln(5)
-    
-    pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Asset Details", 0, 1)
-    
-    pdf.set_font("Arial", "", 10)
-    # ฟังก์ชันช่วยล้างค่าภาษาไทยเพื่อป้องกัน Error
-    def clean_text(text):
-        return str(text).encode('ascii', 'ignore').decode('ascii')
-
-    pdf.cell(0, 8, f"S/N: {clean_text(data['sn'])}", 0, 1)
-    pdf.cell(0, 8, f"Model: {clean_text(data['model'])}", 0, 1)
-    pdf.cell(0, 8, f"To: {clean_text(data['to_loc'])}", 0, 1)
-    pdf.ln(10)
-
-    # ตารางลายเซ็น (สร้างเป็นช่องว่าง)
-    pdf.set_font("Arial", "B", 10)
-    col_w = 63
-    pdf.cell(col_w, 10, "1. Sender", 1, 0, "C")
-    pdf.cell(col_w, 10, "2. Receiver", 1, 0, "C")
-    pdf.cell(col_w, 10, "3. Mover", 1, 1, "C")
-    
-    for _ in range(2): 
-        pdf.cell(col_w, 30, "", 1, 0)
-        pdf.cell(col_w, 30, "", 1, 0)
-        pdf.cell(col_w, 30, "", 1, 1)
-        pdf.set_font("Arial", "", 8)
-        pdf.cell(col_w, 5, "Signature & Date", 0, 0, "C")
-        pdf.cell(col_w, 5, "Signature & Date", 0, 0, "C")
-        pdf.cell(col_w, 5, "Signature & Date", 0, 1, "C")
-        pdf.ln(5)
-
-    # --- จุดที่แก้ไข: การส่งออกไฟล์เป็น Bytes ---
-    # fpdf2.output() ถ้าไม่ระบุชื่อไฟล์ มันจะคืนค่าเป็น bytearray/bytes
-    return pdf.output()
-
-# --- ส่วนของปุ่ม ---
-if st.button("📥 ออกใบโอนย้าย (PDF)"):
+if st.button("👁️ พรีวิวแบบฟอร์มส่งมอบทรัพย์สิน"):
     now_th = datetime.now() + timedelta(hours=7)
-    data_to_pdf = {
-        "sn": target_sn,
-        "model": asset_info['Model Name (ชื่อรุ่น)'],
-        "to_loc": to_location,
-        "date_ref": now_th.strftime('%Y%m%d')
-    }
     
-    # สร้าง PDF และแปลงเป็น bytes ให้ชัวร์
-    pdf_data = create_pdf(data_to_pdf)
-    
-    # แปลง bytearray เป็น bytes เพื่อให้ Streamlit download_button ยอมรับ
-    pdf_bytes = bytes(pdf_data) 
-    
-    st.download_button(
-        label="Click here to Download PDF",
-        data=pdf_bytes,  # ส่ง bytes เข้าไปตรงๆ
-        file_name=f"Transfer_{target_sn}.pdf",
-        mime="application/pdf"
-    )
+    # CSS สำหรับจัดหน้ากระดาษให้เหมือนฟอร์มบริษัท
+    st.markdown("""
+        <style>
+        @media print {
+            [data-testid="stSidebar"], [data-testid="stHeader"], .stButton { display: none !important; }
+            .main .block-container { padding: 0 !important; margin: 0 !important; }
+        }
+        .report-paper {
+            padding: 40px;
+            background-color: white;
+            color: black;
+            font-family: 'Tahoma', sans-serif;
+            border: 1px solid #eee;
+            line-height: 1.6;
+        }
+        .header-table { width: 100%; border: none; }
+        .logo-text { color: #1a4a8a; font-weight: bold; font-size: 24px; }
+        .company-info { font-size: 12px; text-align: right; }
+        .title { text-align: center; font-weight: bold; font-size: 18px; margin: 20px 0; text-decoration: underline; }
+        .line-item { border-bottom: 1px solid black; display: inline-block; min-width: 200px; padding-left: 10px; }
+        .footer-table { width: 100%; margin-top: 50px; text-align: center; }
+        .sig-box { vertical-align: bottom; padding-bottom: 10px; }
+        .red-text { color: red; font-weight: bold; text-decoration: underline; }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # เนื้อหาฟอร์ม
+    html_form = f"""
+    <div class="report-paper">
+        <!-- Header เหมือนในรูป 576ca1 -->
+        <table class="header-table">
+            <tr>
+                <td class="logo-text">FTS<br><span style="font-size:12px;">กิจการร่วมค้า ฟิวเจอร์ สกาย</span></td>
+                <td class="company-info">
+                    <b>กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)</b><br>
+                    เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15<br>
+                    ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400
+                </td>
+            </tr>
+        </table>
+        <hr style="border: 2px solid black;">
+        
+        <div class="title">แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT</div>
+        
+        <div style="text-align: right; margin-bottom: 20px;">
+            วันที่ <span class="line-item" style="min-width:150px;">{now_th.strftime('%d/%m/%Y')}</span>
+        </div>
+
+        <p>ชื่อ - นามสกุล <span class="line-item" style="width:300px;">{s2}</span> ฝ่าย <span class="line-item" style="width:200px;"></span> แผนก <span class="line-item" style="width:150px;"></span></p>
+        <p>เบอร์โทรศัพท์ <span class="line-item" style="width:250px;"></span> สถานที่ทำงาน <span class="line-item" style="width:350px;">{to_location}</span></p>
+        
+        <div style="margin: 20px 0;">
+            <p>☐ Laptop + Mouse + Bag + Adapter &nbsp;&nbsp; <b>หมายเลขเครื่อง :</b> <span class="line-item" style="width:300px;">{target_sn if "Laptop" in asset_info['Model Name (ชื่อรุ่น)'] else ""}</span></p>
+            <p>☐ PC Desktop + Monitor + Mouse + Keyboard &nbsp;&nbsp; <b>หมายเลขเครื่อง :</b> <span class="line-item" style="width:300px;">{target_sn if "PC" in asset_info['Model Name (ชื่อรุ่น)'] else ""}</span></p>
+            <p>อื่นๆ <span class="line-item" style="width:600px;">{asset_info['Model Name (ชื่อรุ่น)']}</span></p>
+        </div>
+
+        <p><b>หมายเหตุ</b> <span class="line-item" style="width:650px;">{transfer_reason}</span></p>
+        <div style="border-bottom: 1px solid black; width: 100%; height: 20px;"></div>
+
+        <p style="text-align: center; font-size: 13px; margin-top: 30px;">
+            ข้าพเจ้าขอรับรองว่าจะดูแลรักษาอุปกรณ์ที่รับมอบเป็นอย่างดี โดยหากมีความเสียหายใดๆ หรือมีการสูญหายเกิดขึ้น 
+            <span class="red-text">ข้าพเจ้าจะขอรับผิดชอบทั้งหมดทุกกรณีโดยไม่มีเงื่อนไข</span> โดยจะทำการซ่อมแซมให้ใช้การได้ดังเดิมหรือจัดหาทดแทนให้ครบในกรณีมีการสูญหายเกิดขึ้น
+        </p>
+        
+        <p style="text-align: center; margin-top: 20px;">จึงเรียนมาเพื่อทราบ และพิจารณาอนุมัติ</p>
+
+        <!-- Signature Section 3 ฝ่าย ตามรูป image_576ca1 -->
+        <table class="footer-table">
+            <tr>
+                <td class="sig-box">ลงชื่อพนักงาน</td>
+                <td class="sig-box">ลงชื่อพนักงานฝ่าย IT</td>
+                <td class="sig-box">ลงชื่อหัวหน้าฝ่าย IT</td>
+            </tr>
+            <tr>
+                <td style="padding-top: 40px;">__________________________</td>
+                <td style="padding-top: 40px;">__________________________</td>
+                <td style="padding-top: 40px;">__________________________</td>
+            </tr>
+            <tr>
+                <td>( <span style="display:inline-block; width:150px; border-bottom:1px dotted #ccc;">{s2}</span> )</td>
+                <td>( <span style="display:inline-block; width:150px; border-bottom:1px dotted #ccc;">{s1}</span> )</td>
+                <td>( <span style="display:inline-block; width:150px; border-bottom:1px dotted #ccc;">{m3}</span> )</td>
+            </tr>
+            <tr style="font-size: 12px;">
+                <td>ส่วนพนักงาน (ผู้รับมอบ)</td>
+                <td>ฝ่ายเทคโนโลยีสารสนเทศ</td>
+                <td>หัวหน้าฝ่ายเทคโนโลยีสารสนเทศ</td>
+            </tr>
+            <tr style="font-size: 11px;">
+                <td>วันที่ ______/______/______</td>
+                <td>วันที่ ______/______/______</td>
+                <td>วันที่ ______/______/______</td>
+            </tr>
+        </table>
+    </div>
+    """
+    st.markdown(html_form, unsafe_allow_html=True)
+    st.info("💡 วิธีการใช้งาน: กด Ctrl + P เพื่อพิมพ์ หรือ Save เป็น PDF (หน้าเอกสารจะจัดสัดส่วนให้อัตโนมัติ)")
