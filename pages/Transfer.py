@@ -146,34 +146,50 @@ with st.container(border=True):
     with f3:
         it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
 
-# --- 3. ส่วนการประมวลผล ---
+# --- ส่วนการประมวลผล (บรรทัดที่ 145 เป็นต้นไป) ---
 if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
-    if not s_new or not to_location: 
+    # ตรวจสอบตัวแปร s_new และ to_location (ต้องตรงกับที่ประกาศไว้ใน UI)
+    if not s_new or not to_location:
         st.warning("⚠️ กรุณากรอกชื่อผู้รับและสถานที่ปลายทาง")
+    elif not selected_sns:
+        st.warning("⚠️ กรุณาเลือก Serial Number อย่างน้อย 1 รายการ")
     else:
         now_th = datetime.now() + timedelta(hours=7)
+        
+        # เตรียมข้อมูลอุปกรณ์ที่เลือก
+        selected_items = []
+        for sn in selected_sns:
+            # ดึงข้อมูลจาก DataFrame
+            row = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == sn].iloc[0]
+            selected_items.append({
+                "sn": sn,
+                "model": row['Model Name (ชื่อรุ่น)']
+            })
+
+        # รวบรวมข้อมูลส่งเข้าฟังก์ชันสร้าง PDF
         pdf_data = {
             "date": now_th.strftime('%d/%m/%Y'),
             "items": selected_items,
             "to_loc": to_location,
             "reason": transfer_reason,
-            "sender_name": s_old,    
-            "receiver_name": s_new,  
-            "it_staff": it_staff      
-        }
+            "s_old": s_old,
+            "s_new": s_new,
+            "it_staff": it_staff
         }
         
-        # สร้าง PDF และบันทึกเข้า session
-        pdf_out = create_transfer_pdf(pdf_data)
-        st.session_state.pdf_ready = bytes(pdf_out)
-        st.session_state.last_sn = target_sn
-        st.success("✅ สร้างไฟล์สำเร็จ! กดดาวน์โหลดที่ปุ่มด้านล่าง")
+        try:
+            # สร้าง PDF และบันทึกลง Session State
+            pdf_out = create_transfer_pdf(pdf_data)
+            st.session_state.pdf_ready = bytes(pdf_out)
+            st.success(f"✅ เตรียมไฟล์สำหรับอุปกรณ์ {len(selected_sns)} รายการสำเร็จ!")
+        except Exception as e:
+            st.error(f"เกิดข้อผิดพลาดในการสร้าง PDF: {e}")
 
-# --- 4. ปุ่มดาวน์โหลด (อยู่นอก if button เพื่อไม่ให้หายไป) ---
+# --- ส่วนปุ่มดาวน์โหลด ---
 if st.session_state.pdf_ready is not None:
     st.download_button(
-        label=f"📥 ดาวน์โหลดไฟล์ Transfer_{st.session_state.last_sn}.pdf",
+        label="📥 คลิกเพื่อดาวน์โหลด PDF",
         data=st.session_state.pdf_ready,
-        file_name=f"Transfer_{st.session_state.last_sn}.pdf",
+        file_name=f"Transfer_Note_{datetime.now().strftime('%Y%m%d')}.pdf",
         mime="application/pdf"
     )
