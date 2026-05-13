@@ -60,9 +60,6 @@ def create_transfer_pdf(data):
     # ใช้ฟังก์ชันช่วยตรวจสอบ ถ้าฟอนต์ไม่ใช่ไทย ให้โชว์อังกฤษแทน
     def txt(thai, eng):
         return thai if font_main == 'THSarabun' else eng
-
-    pdf.cell(0, 15, txt("แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", "IT Asset Handover Form"), 0, 1, "C")
-    # ... (โค้ดส่วนอื่นๆ ให้ใช้ฟังก์ชัน txt() ครอบไว้เพื่อความปลอดภัย)
     
     # หัวข้อเอกสาร (ตามสไตล์รูป 576ca1)
     pdf.set_font(font_main, 'B', 22)
