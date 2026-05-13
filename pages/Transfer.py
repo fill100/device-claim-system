@@ -61,75 +61,71 @@ with st.container(border=True):
 from fpdf import FPDF
 import io
 
-# --- ฟังก์ชันสร้าง PDF ---
+# --- ฟังก์ชันสร้าง PDF (เวอร์ชัน fpdf2) ---
 def create_pdf(data):
+    # ใช้ fpdf2 แทน
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", "B", 16)
     
-    # หัวข้อเอกสาร
+    # ตั้งค่า Font มาตรฐาน (Arial) - จะใช้ได้เฉพาะภาษาอังกฤษ
+    pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Asset Transfer Request Form", 0, 1, "C")
     pdf.ln(5)
     
-    # ข้อมูลทรัพย์สิน
+    # ส่วนข้อมูลทรัพย์สิน
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Asset Information", 0, 1)
-    pdf.set_font("Arial", "", 11)
-    pdf.cell(100, 8, f"Serial Number (S/N): {data['sn']}", 0, 0)
-    pdf.cell(0, 8, f"Model: {data['model']}", 0, 1)
-    pdf.cell(100, 8, f"Current Location: {data['loc']}", 0, 0)
-    pdf.cell(0, 8, f"To Location: {data['to_loc']}", 0, 1)
-    pdf.multi_cell(0, 8, f"Reason: {data['reason']}")
-    pdf.ln(10)
+    pdf.cell(0, 10, "Asset Details", 0, 1)
     
-    # ตารางลายเซ็น 3 คอลัมน์ (Sender, Receiver, Mover)
+    pdf.set_font("Arial", "", 10)
+    # ใช้ .encode('latin-1', 'replace') เพื่อป้องกันเครื่องหมายแปลกๆ ทำ Error
+    def clean_text(text):
+        return str(text).encode('ascii', 'ignore').decode('ascii')
+
+    pdf.cell(0, 8, f"S/N: {clean_text(data['sn'])}", 0, 1)
+    pdf.cell(0, 8, f"Model: {clean_text(data['model'])}", 0, 1)
+    pdf.cell(0, 8, f"To: {clean_text(data['to_loc'])}", 0, 1)
+    pdf.ln(5)
+
+    # ตารางลายเซ็น (สร้างเป็นช่องว่างไว้ให้เซ็นด้วยมือ)
     pdf.set_font("Arial", "B", 10)
     col_w = 63
-    pdf.cell(col_w, 10, "1. Sender (Original Owner)", 1, 0, "C")
-    pdf.cell(col_w, 10, "2. Receiver (New Owner)", 1, 0, "C")
-    pdf.cell(col_w, 10, "3. Mover (Operation)", 1, 1, "C")
+    pdf.cell(col_w, 10, "1. Sender", 1, 0, "C")
+    pdf.cell(col_w, 10, "2. Receiver", 1, 0, "C")
+    pdf.cell(col_w, 10, "3. Mover", 1, 1, "C")
     
-    # บรรทัดผู้ปฏิบัติงาน (Staff)
-    pdf.set_font("Arial", "", 9)
-    pdf.cell(col_w, 25, f"Staff: {data['s1']}", 1, 0, "L")
-    pdf.cell(col_w, 25, f"Staff: {data['s2']}", 1, 0, "L")
-    pdf.cell(col_w, 25, f"Staff: {data['s3']}", 1, 1, "L")
-    
-    # บรรทัดหัวหน้า (Manager)
-    pdf.cell(col_w, 25, f"Manager: {data['m1']}", 1, 0, "L")
-    pdf.cell(col_w, 25, f"Manager: {data['m2']}", 1, 0, "L")
-    pdf.cell(col_w, 25, f"Manager: {data['m3']}", 1, 1, "L")
-    
-    pdf.ln(10)
-    pdf.set_font("Arial", "I", 8)
-    pdf.cell(0, 10, f"Audit Ref: {data['sn']}-{data['date_ref']}", 0, 0, "R")
-    
-    return pdf.output(dest='S').encode('latin-1', 'ignore')
+    # ช่องว่างสำหรับเซ็น (Signature Spaces)
+    for _ in range(2): # สร้าง 2 แถว (พนักงาน และ หัวหน้า)
+        pdf.cell(col_w, 30, "", 1, 0)
+        pdf.cell(col_w, 30, "", 1, 0)
+        pdf.cell(col_w, 30, "", 1, 1)
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(col_w, 5, "Signature & Date", 0, 0, "C")
+        pdf.cell(col_w, 5, "Signature & Date", 0, 0, "C")
+        pdf.cell(col_w, 5, "Signature & Date", 0, 1, "C")
+        pdf.ln(5)
 
-# --- ส่วนของปุ่มในหน้า Streamlit ---
-if st.button("📄 สร้างไฟล์ PDF สำหรับพิมพ์"):
-    if not to_location or not s1 or not s2:
-        st.warning("กรุณากรอกข้อมูลสำคัญให้ครบถ้วน")
-    else:
-        now_th = datetime.now() + timedelta(hours=7)
-        data_to_pdf = {
-            "sn": target_sn,
-            "model": asset_info['Model Name (ชื่อรุ่น)'],
-            "loc": asset_info['Location (สถานที่)'],
-            "to_loc": to_location,
-            "reason": transfer_reason,
-            "s1": s1, "m1": m1,
-            "s2": s2, "m2": m2,
-            "s3": s3, "m3": m3,
-            "date_ref": now_th.strftime('%Y%m%d')
-        }
-        
-        pdf_output = create_pdf(data_to_pdf)
-        
-        st.success("สร้างไฟล์สำเร็จ! กดปุ่มดาวน์โหลดด้านล่างได้เลย")
-        st.download_button(
-            label="📥 Download Transfer Form (PDF)",
-            data=pdf_output,
-            file_name=f"Transfer_{target_sn}.pdf",
-            mime="application/pdf",
-        )
+    pdf.set_font("Arial", "I", 8)
+    pdf.cell(0, 10, f"Reference: {data['sn']}-{data['date_ref']}", 0, 0, "R")
+    
+    # ส่งออกแบบ Bytes โดยตรง (fpdf2 ใช้ output() ได้เลย)
+    return pdf.output()
+
+# --- ส่วนของปุ่ม ---
+if st.button("📥 ออกใบโอนย้าย (PDF)"):
+    now_th = datetime.now() + timedelta(hours=7)
+    data_to_pdf = {
+        "sn": target_sn,
+        "model": asset_info['Model Name (ชื่อรุ่น)'],
+        "to_loc": to_location,
+        "date_ref": now_th.strftime('%Y%m%d')
+    }
+    
+    # สร้าง PDF
+    pdf_bytes = create_pdf(data_to_pdf)
+    
+    st.download_button(
+        label="Download Transfer Form",
+        data=pdf_bytes,
+        file_name=f"Transfer_{target_sn}.pdf",
+        mime="application/pdf"
+    )
