@@ -24,42 +24,44 @@ def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- จุดที่แก้ไข: การโหลดโลโก้ให้ชัวร์ ---
     current_dir = os.path.dirname(os.path.abspath(__file__))
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
-    
-    if os.path.exists(logo_path):
-        # วางโลโก้ที่ x=10, y=8 (ขยับขึ้นนิดหน่อยให้สวย) กว้าง 45 มม.
-        pdf.image(logo_path, x=10, y=8, w=45)
-    else:
-        # ถ้าหาไม่เจอ ให้โชว์ Text แทนชั่วคราวเพื่อจะได้รู้ว่า Path ผิด
-        pdf.set_font('Arial', 'B', 12)
-        pdf.text(10, 15, "LOGO NOT FOUND") 
-        # ลอง print list ไฟล์ออกมาดูใน log (Manage app) เพื่อ debug
-        print(f"Files in current dir: {os.listdir(current_dir)}")
-    
-    # --- ส่วนที่เหลือ (ที่อยู่บริษัทและเส้นใต้) ---
-    # ใช้ Font ไทย (ตรวจสอบ Path ฟอนต์ด้วยนะครับ)
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+
+    # 1. วางโลโก้ (ด้านซ้าย)
+    if os.path.exists(logo_path):
+        # ปรับ y=10 ให้โลโก้อยู่ในระดับที่สวยงาม
+        pdf.image(logo_path, x=10, y=10, w=45)
+    
+    # 2. ใส่ข้อมูลบริษัท (ชิดขวา)
     if os.path.exists(font_path):
         pdf.add_font('THSarabun', '', font_path)
         pdf.add_font('THSarabun', 'B', font_path)
         pdf.set_font('THSarabun', 'B', 14)
+    else:
+        pdf.set_font('Arial', 'B', 12)
+
+    # ปรับตำแหน่ง Y ของตัวหนังสือให้เริ่มต้นที่ 12 (เพื่อให้กึ่งกลางขนานกับโลโก้)
+    pdf.set_y(12) 
     
-    pdf.set_xy(100, 10) 
-    pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "L")
+    # ใช้ cell(0, ...) และ align='R' เพื่อให้ข้อความไปชิดขอบขวาสุดของหน้ากระดาษ
+    pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "R")
     
     pdf.set_font('THSarabun' if os.path.exists(font_path) else 'Arial', '', 11)
-    pdf.set_x(100)
-    pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "L")
-    pdf.set_x(100)
-    pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "L")
+    pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
+    pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
     
+    # 3. วาดเส้นใต้
     pdf.set_draw_color(80, 80, 80)
     pdf.set_line_width(0.8)
-    pdf.line(10, 32, 200, 32) # ปรับระดับเส้นให้สมดุลกับโลโก้
+    # ลากเส้นใต้โลโก้และที่อยู่ (ขยับลงมาที่ y=35)
+    pdf.line(10, 35, 200, 35) 
     
-    pdf.ln(15)
+    pdf.ln(12) # เว้นระยะก่อนเริ่มเนื้อหา
+    
+    # --- ส่วนหัวข้อแบบฟอร์ม ---
+    pdf.set_font('THSarabun' if os.path.exists(font_path) else 'Arial', 'B', 20)
+    pdf.cell(0, 15, "แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", 0, 1, "C")
     
     # --- จบส่วน Header ---
     
