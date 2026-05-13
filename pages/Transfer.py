@@ -24,6 +24,45 @@ def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
     
+    # --- เริ่มส่วน Header ตามรูป image_568439 ---
+    
+    # 1. วางโลโก้ (ด้านซ้าย)
+    logo_path = "FTS-LOGO-01.png"
+    if os.path.exists(logo_path):
+        # วางรูปที่ตำแหน่ง x=10, y=10 กว้าง 45 มม.
+        pdf.image(logo_path, x=10, y=10, w=45)
+    
+    # 2. ใส่ข้อมูลบริษัท (ด้านขวา)
+    # ค้นหาฟอนต์ไทยก่อน (ใช้ Logic เดิมที่คุณมี)
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+    
+    if os.path.exists(font_path):
+        pdf.add_font('THSarabun', '', font_path)
+        pdf.add_font('THSarabun', 'B', font_path)
+        pdf.set_font('THSarabun', 'B', 14)
+    else:
+        pdf.set_font('Arial', 'B', 12)
+
+    # ขยับ Cursor ไปทางขวาเพื่อพิมพ์ที่อยู่ (x=100 คือประมาณกลางหน้าไปทางขวา)
+    pdf.set_xy(100, 10) 
+    pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "L")
+    
+    pdf.set_font('THSarabun' if os.path.exists(font_path) else 'Arial', '', 11)
+    pdf.set_x(100)
+    pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "L")
+    pdf.set_x(100)
+    pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "L")
+    
+    # 3. วาดเส้นใต้สีเทาเข้ม (เหมือนในรูป)
+    pdf.set_draw_color(80, 80, 80) # สีเทาเข้ม
+    pdf.set_line_width(1)
+    pdf.line(10, 35, 200, 35) # ลากเส้นจากซ้ายไปขวา
+    
+    pdf.ln(10) # เว้นระยะก่อนเริ่มเนื้อหาถัดไป
+    
+    # --- จบส่วน Header ---
+    
     # --- ระบบค้นหา Font แบบยืดหยุ่น ---
     # ลองหาไฟล์จากหลายๆ ที่ที่อาจเป็นไปได้
     possible_paths = [
