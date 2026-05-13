@@ -12,6 +12,7 @@ with st.sidebar:
     st.markdown("# 💻 IT Management")
     st.page_link("app.py", label="Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
+    st.page_link("pages/Transfer.py", label="Asset System", icon="✈️")
     st.divider()
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
