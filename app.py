@@ -129,6 +129,7 @@ c1.metric("ทั้งหมด", len(df))
 c2.markdown(f'<div style="background-color:#FFD700; padding:10px; border-radius:10px; text-align:center; color:black;"><b>In Progress:</b> {inprogress}</div>', unsafe_allow_html=True)
 c3.markdown(f'<div style="background-color:#28a745; padding:10px; border-radius:10px; text-align:center; color:white;"><b>Done:</b> {done}</div>', unsafe_allow_html=True)
 
+from datetime import datetime, timedelta
 # --- 5. เพิ่มรายการใหม่ ---
 with st.expander("➕ เพิ่มรายการแจ้งซ่อม"):
     with st.form("add_form", clear_on_submit=True):
@@ -141,12 +142,30 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม"
             stt = st.selectbox("สถานะ", ["inprogress", "Done"])
             dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
             sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
-        if st.form_submit_button("บันทึกข้อมูล"):
+       if st.form_submit_button("บันทึกข้อมูล"):
             if sn_f:
-                new_row = pd.DataFrame([{"วันที่รับแจ้ง": datetime.now().strftime("%Y-%m-%d %H:%M"), "วันที่ส่งเคลม": dt_clm.strftime("%Y-%m-%d") if dt_clm else "", "สาขา": br, "counter": cnt, "Serial เครื่องที่เสีย": sn_f, "สถานะ": stt, "Serial เครื่องที่เปลี่ยนใหม่": sn_n}])
+                # แก้ไขปัญหาเวลาไม่ตรง: ปรับจาก UTC เป็นเวลาไทย (UTC+7)
+                now_thailand = datetime.now() + timedelta(hours=7)
+                time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+                
+                new_row = pd.DataFrame([{
+                    "วันที่รับแจ้ง": time_str, 
+                    "วันทีนำไปติดตั้งใหม่": dt_clm.strftime("%Y-%m-%d") if dt_clm else "", 
+                    "สาขา": br, 
+                    "counter": cnt, 
+                    "Serial เครื่องที่เสีย": sn_f, 
+                    "สถานะ": stt, 
+                    "Serial เครื่องที่เปลี่ยนใหม่": sn_n
+                }])
+                
+                # รวมข้อมูลและอัปเดต
                 df = pd.concat([df, new_row], ignore_index=True).astype(str)
                 conn.update(worksheet=selected_sheet, data=df)
+                
+                st.success(f"บันทึกข้อมูลสำเร็จเมื่อเวลา {time_str}")
                 st.rerun()
+            else:
+                st.error("กรุณาระบุ Serial เครื่องที่เสีย")
 
 # --- 6. แก้ไขและลบแถว (ปรับปรุงให้แก้ไขได้ครบทุกคอลัมน์) ---
 if not df.empty:
