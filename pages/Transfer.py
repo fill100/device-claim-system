@@ -57,6 +57,7 @@ def create_transfer_pdf(data):
     # --- 2. ส่วน Checkbox การดำเนินการ ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
+    pdf.set_line_width(0.2)
     pdf.set_font('THSarabun', '', 14)
     pdf.rect(15, pdf.get_y()+2, 4, 4); pdf.set_x(22); pdf.cell(40, 8, "โอนย้ายปกติ", 0, 0)
     pdf.rect(55, pdf.get_y()+2, 4, 4); pdf.set_x(62); pdf.cell(40, 8, "ส่งซ่อม/เคลม", 0, 0)
