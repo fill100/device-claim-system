@@ -131,4 +131,4 @@ if st.button("👁️ พรีวิวใบโอนย้าย และพ
         """
         
         st.markdown(html_content, unsafe_allow_html=True)
-        st.success("✅ แก้ไขให้แล้วครับ! ช่องลายเซ็น 6 ช่องจะกลับมาแน่นอน ลองกดพรีวิวอีกครั้งนะครับ")
+        st.success("✅")
