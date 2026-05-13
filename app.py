@@ -195,6 +195,8 @@ if not df.empty:
                 try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
                 except: curr_d_ins = None
                 new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
+                # 9. สถานะ
+                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
             with e2:
                 # 4. สาขา
                 new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
@@ -205,8 +207,6 @@ if not df.empty:
                 new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
                 # 7. Serial เครื่องที่ส่งให้ศูนย์
                 new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                # 9. สถานะ
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
             
             st.divider()
             b1, b2 = st.columns(2)
