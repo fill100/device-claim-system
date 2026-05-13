@@ -148,7 +148,7 @@ with st.container(border=True):
 
 # --- 3. ส่วนการประมวลผล ---
 if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
-    if not s2 or not to_location:
+    if not s_new or not to_location: 
         st.warning("⚠️ กรุณากรอกชื่อผู้รับและสถานที่ปลายทาง")
     else:
         now_th = datetime.now() + timedelta(hours=7)
