@@ -1,96 +1,115 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from fpdf import FPDF
 from streamlit_gsheets import GSheetsConnection
 
-st.set_page_config(page_title="Transfer Request", layout="wide")
+st.set_page_config(page_title="Transfer Form", layout="wide")
 
-# --- ฟังก์ชันสร้าง PDF ---
-class TransferForm(FPDF):
-    def header(self):
-        self.set_font('Arial', 'B', 16)
-        self.cell(0, 10, 'Asset Transfer Request Form', 0, 1, 'C')
-        self.ln(5)
+# --- 1. การเชื่อมต่อข้อมูล ---
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    df_asset = conn.read(worksheet="Asset Management", ttl="0")
+except:
+    st.error("ไม่สามารถดึงข้อมูลจาก Asset Management ได้")
+    st.stop()
 
-def generate_pdf(data):
-    pdf = TransferForm()
-    pdf.add_page()
-    pdf.set_font('Arial', '', 12)
-    
-    # ส่วนข้อมูลทั่วไป
-    pdf.cell(0, 10, f"Date: {data['date']}", 0, 1)
-    pdf.cell(0, 10, f"Asset S/N: {data['sn']}", 0, 1)
-    pdf.cell(0, 10, f"Model: {data['model']}", 0, 1)
-    pdf.cell(0, 10, f"To Location: {data['to_loc']}", 0, 1)
-    pdf.ln(10)
-    
-    # ส่วนลายเซ็น (สร้างเป็นตาราง 3 คอลัมน์)
-    col_width = 60
-    pdf.set_font('Arial', 'B', 10)
-    pdf.cell(col_width, 10, "1. Original Owner", 1, 0, 'C')
-    pdf.cell(col_width, 10, "2. New Owner", 1, 0, 'C')
-    pdf.cell(col_width, 10, "3. Mover", 1, 1, 'C')
-    
-    pdf.set_font('Arial', '', 9)
-    # แถวผู้ปฏิบัติงาน
-    pdf.cell(col_width, 20, f"Staff: {data['s1']}\n", 1, 0, 'L')
-    pdf.cell(col_width, 20, f"Staff: {data['s2']}\n", 1, 0, 'L')
-    pdf.cell(col_width, 20, f"Staff: {data['s3']}\n", 1, 1, 'L')
-    
-    # แถวหัวหน้า
-    pdf.cell(col_width, 20, f"Manager: {data['m1']}\n", 1, 0, 'L')
-    pdf.cell(col_width, 20, f"Manager: {data['m2']}\n", 1, 0, 'L')
-    pdf.cell(col_width, 20, f"Manager: {data['m3']}\n", 1, 1, 'L')
-    
-    return pdf.output(dest='S').encode('latin-1')
+# --- 2. ส่วนของ FORM รับข้อมูล ---
+st.title("📦 ระบบออกเอกสารใบโอนย้ายทรัพย์สิน")
+st.info("กรอกข้อมูลให้ครบถ้วนเพื่อสร้างใบโอนย้ายสำหรับ Audit")
 
-# --- หน้า UI ---
-st.title("📦 ใบโอนย้ายทรัพย์สิน (Audit Approved)")
-
-# ดึงข้อมูลทรัพย์สินมาให้เลือก
-conn = st.connection("gsheets", type=GSheetsConnection)
-df_asset = conn.read(worksheet="Asset Management", ttl="0")
-
-with st.form("transfer_form"):
-    st.subheader("1. ข้อมูลทรัพย์สิน")
-    target_sn = st.selectbox("เลือก Serial Number", df_asset["Serial Number (เลขซีเรียล)"].tolist())
-    reason = st.text_area("เหตุผลการโอนย้าย")
-    to_loc = st.text_input("โอนย้ายไปที่หน่วยงาน/สถานที่ใด")
+with st.container(border=True):
+    col_a, col_b = st.columns(2)
+    with col_a:
+        # ดึง S/N มาให้เลือกเพื่อลดความผิดพลาด
+        target_sn = st.selectbox("เลือกรหัสทรัพย์สิน (S/N)", df_asset["Serial Number (เลขซีเรียล)"].unique())
+        asset_info = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == target_sn].iloc[0]
+        st.write(f"**รุ่นที่เลือก:** {asset_info['Model Name (ชื่อรุ่น)']}")
     
+    with col_b:
+        to_location = st.text_input("สถานที่ปลายทาง / หน่วยงานที่รับโอน")
+        transfer_reason = st.text_input("วัตถุประสงค์การโอนย้าย")
+
     st.divider()
     
+    # ส่วนลายเซ็น 3 ฝ่าย
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.info("เจ้าของเดิม (Sender)")
-        s1 = st.text_input("ชื่อเจ้าของเดิม")
-        m1 = st.text_input("ชื่อหัวหน้า (เจ้าของเดิม)")
+        st.markdown("### ⬅️ ต้นทาง (Sender)")
+        s1 = st.text_input("ชื่อเจ้าของเดิม", placeholder="ผู้ส่งมอบ")
+        m1 = st.text_input("ชื่อหัวหน้าต้นทาง", placeholder="ผู้อนุมัติส่งมอบ")
     with c2:
-        st.success("เจ้าของใหม่ (Receiver)")
-        s2 = st.text_input("ชื่อเจ้าของใหม่")
-        m2 = st.text_input("ชื่อหัวหน้า (เจ้าของใหม่)")
+        st.markdown("### ➡️ ปลายทาง (Receiver)")
+        s2 = st.text_input("ชื่อเจ้าของใหม่", placeholder="ผู้รับมอบ")
+        m2 = st.text_input("ชื่อหัวหน้าปลายทาง", placeholder="ผู้อนุมัติรับมอบ")
     with c3:
-        st.warning("ผู้ดำเนินการ (Mover)")
-        s3 = st.text_input("ชื่อผู้มาขนย้าย")
-        m3 = st.text_input("ชื่อหัวหน้า (ผู้ขนย้าย)")
+        st.markdown("### 🚚 ผู้ดำเนินการ (Mover)")
+        s3 = st.text_input("ชื่อผู้ขนย้าย", placeholder="ผู้เคลื่อนย้าย")
+        m3 = st.text_input("ชื่อหัวหน้าผู้ขนย้าย", placeholder="ผู้อนุมัติการเคลื่อนย้าย")
 
-    if st.form_submit_button("สร้างเอกสารโอนย้าย"):
-        # รวบรวมข้อมูล
-        asset_info = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == target_sn].iloc[0]
-        data = {
-            "date": (datetime.now() + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M"),
-            "sn": target_sn,
-            "model": asset_info["Model Name (ชื่อรุ่น)"],
-            "to_loc": to_loc,
-            "s1": s1, "m1": m1,
-            "s2": s2, "m2": m2,
-            "s3": s3, "m3": m3
-        }
+# --- 3. การแสดงผลเพื่อการพิมพ์ (Print Preview) ---
+if st.button("👁️ พรีวิวใบโอนย้าย และพิมพ์เอกสาร"):
+    if not to_location or not s1 or not s2:
+        st.warning("กรุณากรอกข้อมูลสำคัญ (สถานที่ปลายทาง, ชื่อผู้ส่ง, ชื่อผู้รับ) ให้ครบถ้วน")
+    else:
+        # สร้างพื้นที่สำหรับ Print
+        now_th = datetime.now() + timedelta(hours=7)
         
-        pdf_bytes = generate_pdf(data)
-        st.download_button(
-            label="📥 ดาวน์โหลดใบโอนย้าย (PDF)",
-            data=pdf_bytes,
-            file_name=f"Transfer_{target_sn}.pdf",
-            mime="application/pdf"
-        )
+        # HTML/CSS สำหรับจัดรูปแบบเอกสารให้ดูเหมือนกระดาษ A4
+        html_template = f"""
+        <div style="padding: 30px; border: 1px solid #ccc; background-color: white; color: black; font-family: 'Tahoma';">
+            <div style="text-align: center;">
+                <h2 style="margin-bottom: 5px;">ใบโอนย้ายทรัพย์สิน (Asset Transfer Request)</h2>
+                <p>วันที่ดำเนินการ: {now_th.strftime('%d/%m/%Y %H:%M')}</p>
+            </div>
+            <hr>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <tr>
+                    <td style="padding: 8px;"><b>รหัสซีเรียล (S/N):</b> {target_sn}</td>
+                    <td style="padding: 8px;"><b>รุ่น (Model):</b> {asset_info['Model Name (ชื่อรุ่น)']}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px;"><b>สถานที่เดิม:</b> {asset_info['Location (สถานที่)']}</td>
+                    <td style="padding: 8px;"><b>สถานที่ปลายทาง:</b> {to_location}</td>
+                </tr>
+                <tr>
+                    <td colspan="2" style="padding: 8px;"><b>เหตุผลการโอนย้าย:</b> {transfer_reason}</td>
+                </tr>
+            </table>
+            
+            <table style="width: 100%; margin-top: 50px; text-align: center; border-collapse: collapse;">
+                <tr style="background-color: #f2f2f2;">
+                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายต้นทาง (Sender)</th>
+                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายปลายทาง (Receiver)</th>
+                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ผู้ดำเนินการ (Mover)</th>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {s1} )<br>เจ้าของเดิม
+                    </td>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {s2} )<br>เจ้าของใหม่
+                    </td>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {s3} )<br>ผู้ขนย้าย
+                    </td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {m1} )<br>หัวหน้าฝ่ายต้นทาง
+                    </td>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {m2} )<br>หัวหน้าฝ่ายปลายทาง
+                    </td>
+                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                        _______________________<br>( {m3} )<br>หัวหน้าฝ่ายขนย้าย
+                    </td>
+                </tr>
+            </table>
+            <div style="margin-top: 30px; font-size: 10px; text-align: right; color: #666;">
+                <i>เอกสารสร้างโดยระบบ Asset Management System - Audit Reference: {target_sn}-{now_th.strftime('%Y%m%d')}</i>
+            </div>
+        </div>
+        """
+        
+        st.markdown(html_template, unsafe_allow_html=True)
+        st.info("💡 คำแนะนำ: กด Ctrl + P เพื่อพิมพ์เอกสารนี้ หรือบันทึกเป็น PDF")
