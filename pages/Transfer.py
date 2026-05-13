@@ -59,69 +59,87 @@ with st.container(border=True):
         m3 = st.text_input("ชื่อหัวหน้าผู้ขนย้าย", placeholder="ผู้อนุมัติการเคลื่อนย้าย")
 
 # --- 3. การแสดงผลเพื่อการพิมพ์ (Print Preview) ---
+# --- 3. การแสดงผลเพื่อการพิมพ์ (ปรับปรุงใหม่) ---
 if st.button("👁️ พรีวิวใบโอนย้าย และพิมพ์เอกสาร"):
     if not to_location or not s1 or not s2:
-        st.warning("กรุณากรอกข้อมูลสำคัญ (สถานที่ปลายทาง, ชื่อผู้ส่ง, ชื่อผู้รับ) ให้ครบถ้วน")
+        st.warning("กรุณากรอกข้อมูลสำคัญให้ครบถ้วน")
     else:
-        # สร้างพื้นที่สำหรับ Print
         now_th = datetime.now() + timedelta(hours=7)
         
-        # HTML/CSS สำหรับจัดรูปแบบเอกสารให้ดูเหมือนกระดาษ A4
-        html_template = f"""
-        <div style="padding: 30px; border: 1px solid #ccc; background-color: white; color: black; font-family: 'Tahoma';">
+        # ใส่ CSS เพื่อซ่อน Sidebar และส่วนอื่นๆ เวลาพิมพ์ (Print Mode)
+        st.markdown("""
+            <style>
+            @media print {
+                /* ซ่อน Sidebar, ปุ่ม, และส่วนที่ไม่ใช่เนื้อหาเอกสาร */
+                [data-testid="stSidebar"], .stButton, header, footer, [data-testid="stHeader"] {
+                    display: none !important;
+                }
+                /* ขยายเนื้อหาให้เต็มหน้ากระดาษ */
+                .main .block-container {
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
+        # สร้างเนื้อหา HTML (รวมตารางลายเซ็นเข้าไปในก้อนเดียว)
+        html_content = f"""
+        <div style="padding: 20px; border: 1px solid #000; background-color: white; color: black; font-family: 'Tahoma', sans-serif;">
             <div style="text-align: center;">
-                <h2 style="margin-bottom: 5px;">ใบโอนย้ายทรัพย์สิน (Asset Transfer Request)</h2>
+                <h2 style="margin: 0;">ใบโอนย้ายทรัพย์สิน (Asset Transfer Request)</h2>
                 <p>วันที่ดำเนินการ: {now_th.strftime('%d/%m/%Y %H:%M')}</p>
             </div>
             <hr>
             <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
                 <tr>
-                    <td style="padding: 8px;"><b>รหัสซีเรียล (S/N):</b> {target_sn}</td>
-                    <td style="padding: 8px;"><b>รุ่น (Model):</b> {asset_info['Model Name (ชื่อรุ่น)']}</td>
+                    <td style="padding: 5px;"><b>รหัสซีเรียล (S/N):</b> {target_sn}</td>
+                    <td style="padding: 5px;"><b>รุ่น (Model):</b> {asset_info['Model Name (ชื่อรุ่น)']}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px;"><b>สถานที่เดิม:</b> {asset_info['Location (สถานที่)']}</td>
-                    <td style="padding: 8px;"><b>สถานที่ปลายทาง:</b> {to_location}</td>
+                    <td style="padding: 5px;"><b>สถานที่เดิม:</b> {asset_info['Location (สถานที่)']}</td>
+                    <td style="padding: 5px;"><b>สถานที่ปลายทาง:</b> {to_location}</td>
                 </tr>
                 <tr>
-                    <td colspan="2" style="padding: 8px;"><b>เหตุผลการโอนย้าย:</b> {transfer_reason}</td>
+                    <td colspan="2" style="padding: 5px;"><b>เหตุผลการโอนย้าย:</b> {transfer_reason}</td>
                 </tr>
             </table>
             
-            <table style="width: 100%; margin-top: 50px; text-align: center; border-collapse: collapse;">
+            <table style="width: 100%; margin-top: 30px; text-align: center; border-collapse: collapse;">
                 <tr style="background-color: #f2f2f2;">
                     <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายต้นทาง (Sender)</th>
                     <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายปลายทาง (Receiver)</th>
                     <th style="border: 1px solid black; padding: 10px; width: 33%;">ผู้ดำเนินการ (Mover)</th>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {s1} )<br>เจ้าของเดิม
                     </td>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {s2} )<br>เจ้าของใหม่
                     </td>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {s3} )<br>ผู้ขนย้าย
                     </td>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {m1} )<br>หัวหน้าฝ่ายต้นทาง
                     </td>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {m2} )<br>หัวหน้าฝ่ายปลายทาง
                     </td>
-                    <td style="border: 1px solid black; padding: 40px 10px 10px 10px;">
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
                         _______________________<br>( {m3} )<br>หัวหน้าฝ่ายขนย้าย
                     </td>
                 </tr>
             </table>
-            <div style="margin-top: 30px; font-size: 10px; text-align: right; color: #666;">
-                <i>เอกสารสร้างโดยระบบ Asset Management System - Audit Reference: {target_sn}-{now_th.strftime('%Y%m%d')}</i>
+            <div style="margin-top: 20px; font-size: 10px; text-align: right; color: #666;">
+                <i>เอกสารสร้างโดยระบบ Asset Management System - Audit Ref: {target_sn}-{now_th.strftime('%Y%m%d')}</i>
             </div>
         </div>
         """
         
-        st.markdown(html_template, unsafe_allow_html=True)
-        st.info("💡 คำแนะนำ: กด Ctrl + P เพื่อพิมพ์เอกสารนี้ หรือบันทึกเป็น PDF")
+        # แสดงผล HTML ก้อนเดียวจบ
+        st.markdown(html_content, unsafe_allow_html=True)
+        st.success("✅ พรีวิวสำเร็จ! กด Ctrl + P เพื่อพิมพ์เฉพาะใบเอกสาร (Sidebar จะถูกซ่อนอัตโนมัติ)")
