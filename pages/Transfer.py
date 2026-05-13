@@ -65,13 +65,14 @@ def create_transfer_pdf(data):
     pdf.ln(5)
 
     # --- 3. ตารางรายการอุปกรณ์ (ปรับแก้ความกว้างให้ตรงกันเป๊ะ) ---
+    pdf.set_line_width(0.2)
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     
     # กำหนดความกว้างคอลัมน์ (รวมกันได้ 190 มม. พอดีหน้ากระดาษ A4)
     w_no = 15      # ลำดับ
     w_sn = 55      # Serial Number
-    w_name = 75    # รายการอุปกรณ์
+    w_name = 55    # รายการอุปกรณ์
     w_note = 45    # หมายเหตุ
     h_cell = 10    # ความสูงช่องตาราง
 
