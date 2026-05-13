@@ -127,7 +127,7 @@ def create_transfer_pdf(data):
     return pdf.output()
 
 # --- ส่วนใน Streamlit ---
-if st.button("生成 PDF (สร้างไฟล์ PDF)"):
+if st.button(" PDF (สร้างไฟล์ PDF)"):
     now_th = datetime.now() + timedelta(hours=7)
     pdf_data = {
         "date": now_th.strftime('%d/%m/%Y'),
