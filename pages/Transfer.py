@@ -24,8 +24,6 @@ def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- เริ่มส่วน Header ตามรูป image_568439 ---
-    
     # 1. วางโลโก้ (ด้านซ้าย)
     logo_path = "FTS-LOGO-01.png"
     if os.path.exists(logo_path):
@@ -33,7 +31,6 @@ def create_transfer_pdf(data):
         pdf.image(logo_path, x=10, y=10, w=45)
     
     # 2. ใส่ข้อมูลบริษัท (ด้านขวา)
-    # ค้นหาฟอนต์ไทยก่อน (ใช้ Logic เดิมที่คุณมี)
     current_dir = os.path.dirname(os.path.abspath(__file__))
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
     
@@ -43,7 +40,6 @@ def create_transfer_pdf(data):
         pdf.set_font('THSarabun', 'B', 14)
     else:
         pdf.set_font('Arial', 'B', 12)
-
     # ขยับ Cursor ไปทางขวาเพื่อพิมพ์ที่อยู่ (x=100 คือประมาณกลางหน้าไปทางขวา)
     pdf.set_xy(100, 10) 
     pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "L")
