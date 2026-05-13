@@ -70,12 +70,29 @@ def create_transfer_pdf(data):
     pdf.cell(50, 10, "หมายเหตุ", 1, 1, "C", True)
 
 # --- 3. ตารางรายการอุปกรณ์ ---
-    pdf.set_font('THSarabun', '', 13)
+pdf.set_font('THSarabun', 'B', 14)
+    pdf.set_fill_color(240, 240, 240)
+    
+    # กำหนดความกว้างคอลัมน์ให้เป็นตัวแปร เพื่อความแม่นยำ
+    w_no = 15      # ลำดับ
+    w_sn = 55      # Serial Number
+    w_name = 75    # รายการอุปกรณ์
+    w_note = 45    # หมายเหตุ
+    h_cell = 10    # ความสูงช่อง
+
+    # หัวตาราง
+    pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
+    pdf.cell(w_sn, h_cell, "Serial Number", 1, 0, "C", True)
+    pdf.cell(w_name, h_cell, "รายการ/รุ่นอุปกรณ์", 1, 0, "C", True)
+    pdf.cell(w_note, h_cell, "หมายเหตุ", 1, 1, "C", True)
+
+    # เนื้อหาตาราง
+    pdf.set_font('THSarabun', '', 14)
     for i, item in enumerate(data['items'], 1):
-        pdf.cell(15, 10, str(i), 1, 0, "C")
-        pdf.cell(50, 10, str(item.get('sn', '-')), 1, 0, "C")
-        pdf.cell(75, 10, str(item.get('model', '-'))[:35], 1, 0, "L")
-        pdf.cell(50, 10, "", 1, 1, "C")
+        pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
+        pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
+        pdf.cell(w_name, h_cell, f" {str(item.get('model', '-'))[:40]}", 1, 0, "L") 
+        pdf.cell(w_note, h_cell, "", 1, 1, "C")
     
     pdf.ln(5)
     pdf.set_font('THSarabun', 'B', 12)
