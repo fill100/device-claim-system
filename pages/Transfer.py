@@ -24,16 +24,22 @@ def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
     
-    # ตรวจสอบและลงทะเบียนฟอนต์ไทย
-    font_path = "THSarabunNew.ttf"
+    # --- ปรับปรุงการโหลด Font ใหม่ ---
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+    
     if os.path.exists(font_path):
+        # ลงทะเบียนแบบปกติ
         pdf.add_font('THSarabun', '', font_path)
-        pdf.set_font('THSarabun', '', 16)
+        # ลงทะเบียน 'B' (ตัวหนา) โดยใช้ไฟล์เดิม (ถ้าไม่มีไฟล์ Bold แยก)
+        pdf.add_font('THSarabun', 'B', font_path) 
+        
+        pdf.set_font('THSarabun', 'B', 22) # คราวนี้จะไม่ Error แล้ว
         font_main = 'THSarabun'
     else:
-        pdf.set_font('Arial', '', 12)
+        pdf.set_font('Arial', 'B', 16)
         font_main = 'Arial'
-        st.error("⚠️ ไม่พบไฟล์ THSarabunNew.ttf กรุณาอัปโหลดไฟล์ฟอนต์ขึ้นระบบ")
+        st.error(f"⚠️ ไม่พบไฟล์ฟอนต์ที่: {font_path}")
 
     # หัวข้อเอกสาร (ตามสไตล์รูป 576ca1)
     pdf.set_font(font_main, 'B', 22)
