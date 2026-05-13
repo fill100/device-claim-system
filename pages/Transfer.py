@@ -119,36 +119,32 @@ def create_transfer_pdf(data):
 
     return pdf.output()
 
-# --- 2. การเชื่อมต่อข้อมูลและ UI ---
+# --- UI ส่วนเลือกข้อมูล ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_asset = conn.read(worksheet="Asset Management", ttl="0")
 
-st.title("📦 ระบบออกใบโอนย้ายทรัพย์สิน")
+st.title("📦 ระบบออกใบโอนย้ายทรัพย์สิน (Multi-items)")
 
-# ใช้ Session State เก็บไฟล์ PDF เพื่อไม่ให้ปุ่มดาวน์โหลดหายไป
 if 'pdf_ready' not in st.session_state:
     st.session_state.pdf_ready = None
-if 'last_sn' not in st.session_state:
-    st.session_state.last_sn = ""
 
 with st.container(border=True):
     c1, c2 = st.columns(2)
     with c1:
-        target_sn = st.selectbox("เลือก Serial Number", df_asset["Serial Number (เลขซีเรียล)"].unique())
-        asset_info = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == target_sn].iloc[0]
+        # เปลี่ยนเป็น multiselect เลือกได้หลายตัว
+        selected_sns = st.multiselect("เลือก Serial Number (เลือกได้หลายรายการ)", df_asset["Serial Number (เลขซีเรียล)"].unique())
         to_location = st.text_input("สถานที่ปลายทาง / หน่วยงานที่รับโอน")
     with c2:
         transfer_reason = st.text_area("หมายเหตุ / เหตุผลการโอนย้าย")
 
     st.divider()
-    
     f1, f2, f3 = st.columns(3)
     with f1:
-        s1 = st.text_input("ชื่อพนักงาน IT (ผู้ส่ง)")
+        s_old = st.text_input("ชื่อผู้ถือครองเดิม")
     with f2:
-        s2 = st.text_input("ชื่อพนักงาน (ผู้รับมอบ)")
+        s_new = st.text_input("ชื่อผู้ถือครองใหม่")
     with f3:
-        m3 = st.text_input("ชื่อหัวหน้าฝ่าย IT")
+        it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
 
 # --- 3. ส่วนการประมวลผล ---
 if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
