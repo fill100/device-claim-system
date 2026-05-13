@@ -74,7 +74,7 @@ def create_transfer_pdf(data):
     w_no = 15      # ลำดับ
     w_sn = 55      # Serial Number
     w_name = 55    # รายการอุปกรณ์
-    w_note = 45    # หมายเหตุ
+    w_note = 75   # หมายเหตุ
     h_cell = 10    # ความสูงช่องตาราง
 
     # หัวตาราง
@@ -92,7 +92,14 @@ def create_transfer_pdf(data):
         model_text = str(item.get('model', '-'))[:40]
         pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
         pdf.cell(w_note, h_cell, "", 1, 1, "C")
-    
+    pdf.ln(3) 
+    if data.get('reason'):
+        pdf.set_font('THSarabun', 'B', 13)
+        pdf.cell(0, 7, "หมายเหตุ / เหตุผลการโอนย้าย:", 0, 1, "L")
+        pdf.set_font('THSarabun', '', 13)
+        # multi_cell จะช่วยให้ข้อความยาวๆ ตัดบรรทัดใหม่ให้เองครับ
+        pdf.multi_cell(0, 6, data['reason'], border=0, align="L")
+        
     pdf.ln(5)
     pdf.set_font('THSarabun', 'B', 11)
     pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
