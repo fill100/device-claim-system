@@ -100,7 +100,7 @@ def create_transfer_pdf(data):
     
     # หัวข้อเอกสาร (ตามสไตล์รูป 576ca1)
     pdf.set_font(font_main, 'B', 22)
-    pdf.cell(0, 15, "แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", 0, 1, "C")
+    pdf.cell(0, 15, "แบบฟอร์มการโอนย้ายทรัพย์สินแผนก IT", 0, 1, "C")
     
     pdf.set_font(font_main, '', 14)
     pdf.cell(0, 10, f"วันที่: {data['date']}", 0, 1, "R")
