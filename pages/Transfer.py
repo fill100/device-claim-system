@@ -30,7 +30,7 @@ def create_transfer_pdf(data):
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
 
-    # Header & Logo
+    # --- 1. Header & Logo ---
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=10, y=10, w=45)
     
@@ -58,7 +58,7 @@ def create_transfer_pdf(data):
     # --- 2. ส่วน Checkbox ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
-    pdf.set_line_width(0.2) # ปรับเส้น Checkbox ให้บางลง
+    pdf.set_line_width(0.2)
     pdf.set_font('THSarabun', '', 14)
     pdf.rect(15, pdf.get_y()+2, 4, 4); pdf.set_x(22); pdf.cell(40, 8, "โอนย้ายปกติ", 0, 0)
     pdf.rect(55, pdf.get_y()+2, 4, 4); pdf.set_x(62); pdf.cell(40, 8, "ส่งซ่อม/เคลม", 0, 0)
@@ -66,35 +66,31 @@ def create_transfer_pdf(data):
     pdf.rect(135, pdf.get_y()+2, 4, 4); pdf.set_x(142); pdf.cell(40, 8, "อื่นๆ..................", 0, 1)
     pdf.ln(5)
 
-    # --- 3. ตารางรายการอุปกรณ์ ---
-pdf.set_font('THSarabun', 'B', 14)
+    # --- 3. ตารางรายการอุปกรณ์ (ปรับสัดส่วนใหม่ให้หมายเหตุใหญ่ขึ้น) ---
+    pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     
-    # ปรับสัดส่วนใหม่ (รวมกันได้ 190 มม. เหมือนเดิม)
-    w_no = 12      # ลำดับ (แคบลงหน่อย)
-    w_sn = 48      # Serial Number
-    w_name = 55    # รายการอุปกรณ์
-    w_note = 75    # หมายเหตุ (ขยายให้กว้างสะใจ)
+    # กำหนดความกว้าง (ต้องตรงกันทั้งหัวและเนื้อหา)
+    w_no, w_sn, w_name, w_note = 12, 48, 55, 75
     h_cell = 10
 
-    # หัวตาราง
+    # วาดหัวตาราง
     pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
     pdf.cell(w_sn, h_cell, "Serial Number", 1, 0, "C", True)
     pdf.cell(w_name, h_cell, "รายการ/รุ่นอุปกรณ์", 1, 0, "C", True)
     pdf.cell(w_note, h_cell, "หมายเหตุ", 1, 1, "C", True)
 
-    # เนื้อหาตาราง (Loop ที่คุณหาอยู่)
+    # วาดเนื้อหาตาราง
     pdf.set_font('THSarabun', '', 14)
     for i, item in enumerate(data['items'], 1):
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
         pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
         
-        # ตัดชื่อรุ่นให้สั้นลงนิดนึงเพื่อประหยัดพื้นที่
-        model_text = str(item.get('model', '-'))[:30]
+        # แสดงชื่อรุ่นอุปกรณ์
+        model_text = str(item.get('model', '-'))[:35]
         pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
         
-        # ช่องหมายเหตุ: แสดงข้อความทั้งหมด (เอา [:30] ออกแล้ว)
-        # ใช้ ln=1 เพื่อขึ้นบรรทัดใหม่อย่างถูกต้อง
+        # แสดงหมายเหตุในช่องสุดท้าย (แถวที่ 1 เท่านั้น)
         note_text = data.get('reason', '') if i == 1 else ""
         pdf.cell(w_note, h_cell, f" {note_text}", 1, 1, "L")
     
@@ -102,7 +98,7 @@ pdf.set_font('THSarabun', 'B', 14)
     pdf.set_font('THSarabun', 'B', 11)
     pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
 
-    # --- 4. ส่วนลายเซ็น 3 กลุ่ม ---
+    # --- 4. ส่วนลายเซ็น ---
     pdf.ln(5)
     w_sign = 63.3
     pdf.set_font('THSarabun', 'B', 11)
