@@ -28,7 +28,7 @@ def create_transfer_pdf(data):
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
 
-    # --- 1. Header (เหมือนเดิม) ---
+    # --- 1. Header & Logo ---
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=10, y=10, w=45)
     
@@ -42,11 +42,15 @@ def create_transfer_pdf(data):
     pdf.set_font('THSarabun', '', 11)
     pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
     pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
+    
+    # วาดเส้นใต้สีเทาเข้ม
+    pdf.set_draw_color(80, 80, 80)
+    pdf.set_line_width(0.8)
     pdf.line(10, 35, 200, 35) 
     
-    pdf.ln(10)
+    pdf.ln(12)
     pdf.set_font('THSarabun', 'B', 18)
-    pdf.cell(0, 10, "แบบฟอร์มการโยกย้ายทรัพย์สิน IT", 0, 1, "C")
+    pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน", 0, 1, "C")
     pdf.set_font('THSarabun', '', 14)
     pdf.cell(0, 8, f"วันที่ดำเนินการ: {data['date']}", 0, 1, "R")
 
@@ -54,31 +58,22 @@ def create_transfer_pdf(data):
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
     pdf.set_font('THSarabun', '', 14)
-    # วาดช่องสี่เหลี่ยมเล็กๆ เป็น Checkbox
     pdf.rect(15, pdf.get_y()+2, 4, 4); pdf.set_x(22); pdf.cell(40, 8, "โอนย้ายปกติ", 0, 0)
     pdf.rect(55, pdf.get_y()+2, 4, 4); pdf.set_x(62); pdf.cell(40, 8, "ส่งซ่อม/เคลม", 0, 0)
-    pdf.rect(95, pdf.get_y()+2, 4, 4); pdf.set_x(102); pdf.cell(40, 8, "ตัดจำหน่าย (Write-off)", 0, 0)
-    pdf.rect(145, pdf.get_y()+2, 4, 4); pdf.set_x(152); pdf.cell(40, 8, "อื่นๆ..................", 0, 1)
+    pdf.rect(95, pdf.get_y()+2, 4, 4); pdf.set_x(102); pdf.cell(40, 8, "ตัดจำหน่าย", 0, 0)
+    pdf.rect(135, pdf.get_y()+2, 4, 4); pdf.set_x(142); pdf.cell(40, 8, "อื่นๆ..................", 0, 1)
     pdf.ln(5)
 
-    # --- 3. ตารางรายการอุปกรณ์ (หลายชิ้น) ---
+    # --- 3. ตารางรายการอุปกรณ์ (ปรับแก้ความกว้างให้ตรงกันเป๊ะ) ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
-    pdf.cell(10, 10, "ลำดับ", 1, 0, "C", True)
-    pdf.cell(50, 10, "Serial Number", 1, 0, "C", True)
-    pdf.cell(80, 10, "รายการ/รุ่นอุปกรณ์", 1, 0, "C", True)
-    pdf.cell(50, 10, "หมายเหตุ", 1, 1, "C", True)
-
-# --- 3. ตารางรายการอุปกรณ์ ---
-pdf.set_font('THSarabun', 'B', 14)
-    pdf.set_fill_color(240, 240, 240)
     
-    # กำหนดความกว้างคอลัมน์ให้เป็นตัวแปร เพื่อความแม่นยำ
+    # กำหนดความกว้างคอลัมน์ (รวมกันได้ 190 มม. พอดีหน้ากระดาษ A4)
     w_no = 15      # ลำดับ
     w_sn = 55      # Serial Number
     w_name = 75    # รายการอุปกรณ์
     w_note = 45    # หมายเหตุ
-    h_cell = 10    # ความสูงช่อง
+    h_cell = 10    # ความสูงช่องตาราง
 
     # หัวตาราง
     pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
@@ -91,47 +86,46 @@ pdf.set_font('THSarabun', 'B', 14)
     for i, item in enumerate(data['items'], 1):
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
         pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
-        pdf.cell(w_name, h_cell, f" {str(item.get('model', '-'))[:40]}", 1, 0, "L") 
+        # ใส่ช่องว่างข้างหน้าเล็กน้อย ( f" {text}" ) เพื่อไม่ให้ตัวหนังสือติดเส้นขอบซ้าย
+        model_text = str(item.get('model', '-'))[:40]
+        pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
         pdf.cell(w_note, h_cell, "", 1, 1, "C")
     
     pdf.ln(5)
-    pdf.set_font('THSarabun', 'B', 12)
-    pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
+    pdf.set_font('THSarabun', 'B', 11)
+    pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
 
-    # --- 4. ส่วนลายเซ็น 3 กลุ่ม (กลุ่มละ 2 คน) ---
+    # --- 4. ส่วนลายเซ็น 3 กลุ่ม (ปรับปรุงช่องไฟ) ---
     pdf.ln(5)
+    w_sign = 63.3 # แบ่ง 190 มม. เป็น 3 ส่วนเท่าๆ กัน
     pdf.set_font('THSarabun', 'B', 11)
     
-    # คำนวณความกว้างคอลัมน์ (หาร 3)
-    w = 63 
+    pdf.cell(w_sign, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
+    pdf.cell(w_sign, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
+    pdf.cell(w_sign, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
 
-    # หัวข้อกลุ่ม
-    pdf.cell(w, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
-    pdf.cell(w, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
-    pdf.cell(w, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
-
-    # แถวที่ 1: ลายเซ็นพนักงาน
+    # แถวที่ 1: ลายเซ็นพนักงาน/เจ้าของ
     pdf.ln(10)
-    pdf.cell(w, 5, "______________________", 0, 0, "C")
-    pdf.cell(w, 5, "______________________", 0, 0, "C")
-    pdf.cell(w, 5, "______________________", 0, 1, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
     
     pdf.set_font('THSarabun', '', 10)
-    pdf.cell(w, 5, "( เจ้าของเดิม )", 0, 0, "C")
-    pdf.cell(w, 5, "( เจ้าของใหม่ )", 0, 0, "C")
-    pdf.cell(w, 5, "( ผู้โยกย้าย )", 0, 1, "C")
+    pdf.cell(w_sign, 5, f"( {data.get('s_old', '............................')} )", 0, 0, "C")
+    pdf.cell(w_sign, 5, f"( {data.get('s_new', '............................')} )", 0, 0, "C")
+    pdf.cell(w_sign, 5, f"( {data.get('it_staff', '............................')} )", 0, 1, "C")
 
     # แถวที่ 2: ลายเซ็นหัวหน้า
     pdf.ln(8)
     pdf.set_font('THSarabun', 'B', 11)
-    pdf.cell(w, 5, "______________________", 0, 0, "C")
-    pdf.cell(w, 5, "______________________", 0, 0, "C")
-    pdf.cell(w, 5, "______________________", 0, 1, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
     
     pdf.set_font('THSarabun', '', 10)
-    pdf.cell(w, 5, "( หัวหน้าต้นทาง )", 0, 0, "C")
-    pdf.cell(w, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
-    pdf.cell(w, 5, "( หัวหน้าผู้โยกย้าย )", 0, 1, "C")
+    pdf.cell(w_sign, 5, "( หัวหน้าต้นทาง )", 0, 0, "C")
+    pdf.cell(w_sign, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
+    pdf.cell(w_sign, 5, "( หัวหน้าฝ่าย IT )", 0, 1, "C")
 
     return pdf.output()
 
