@@ -58,34 +58,51 @@ with st.container(border=True):
         s3 = st.text_input("ชื่อผู้ขนย้าย", placeholder="ผู้เคลื่อนย้าย")
         m3 = st.text_input("ชื่อหัวหน้าผู้ขนย้าย", placeholder="ผู้อนุมัติการเคลื่อนย้าย")
 
-# --- 3. การแสดงผลเพื่อการพิมพ์ (Print Preview) ---
-# --- 3. การแสดงผลเพื่อการพิมพ์ (ปรับปรุงใหม่) ---
 if st.button("👁️ พรีวิวใบโอนย้าย และพิมพ์เอกสาร"):
     if not to_location or not s1 or not s2:
         st.warning("กรุณากรอกข้อมูลสำคัญให้ครบถ้วน")
     else:
         now_th = datetime.now() + timedelta(hours=7)
         
-        # ใส่ CSS เพื่อซ่อน Sidebar และส่วนอื่นๆ เวลาพิมพ์ (Print Mode)
+        # --- เพิ่ม CSS ชุดนี้ครับ ---
         st.markdown("""
             <style>
             @media print {
-                /* ซ่อน Sidebar, ปุ่ม, และส่วนที่ไม่ใช่เนื้อหาเอกสาร */
-                [data-testid="stSidebar"], .stButton, header, footer, [data-testid="stHeader"] {
+                /* 1. ซ่อนทุกอย่างที่ Streamlit สร้างขึ้นมา */
+                [data-testid="stSidebar"], 
+                [data-testid="stHeader"], 
+                [data-testid="stFooter"], 
+                [data-testid="stAppViewMenu"],
+                .stButton, 
+                .stChatMessage,
+                div[data-testid="stVerticalBlock"] > div:has(div.stButton), /* ซ่อนแถบปุ่มทั้งหมด */
+                section[data-testid="stSidebar"] {
                     display: none !important;
                 }
-                /* ขยายเนื้อหาให้เต็มหน้ากระดาษ */
+
+                /* 2. บังคับให้ส่วนที่เป็น Form กรอกข้อมูลหายไปด้วย (ซ่อน container ด้านบน) */
+                div[data-testid="stVerticalBlock"] > div:nth-child(-n+3) {
+                    display: none !important;
+                }
+
+                /* 3. จัดการขอบกระดาษ */
                 .main .block-container {
                     padding: 0 !important;
                     margin: 0 !important;
+                    max-width: 100% !important;
+                }
+                
+                /* 4. แสดงผลเฉพาะตัว HTML ของเรา */
+                .print-content {
+                    display: block !important;
                 }
             }
             </style>
         """, unsafe_allow_html=True)
 
-        # สร้างเนื้อหา HTML (รวมตารางลายเซ็นเข้าไปในก้อนเดียว)
+        # --- ส่วนของเนื้อหาเอกสาร (เพิ่ม class="print-content" เข้าไป) ---
         html_content = f"""
-        <div style="padding: 20px; border: 1px solid #000; background-color: white; color: black; font-family: 'Tahoma', sans-serif;">
+        <div class="print-content" style="padding: 20px; border: 1px solid #000; background-color: white; color: black; font-family: 'Tahoma', sans-serif;">
             <div style="text-align: center;">
                 <h2 style="margin: 0;">ใบโอนย้ายทรัพย์สิน (Asset Transfer Request)</h2>
                 <p>วันที่ดำเนินการ: {now_th.strftime('%d/%m/%Y %H:%M')}</p>
@@ -112,26 +129,14 @@ if st.button("👁️ พรีวิวใบโอนย้าย และพ
                     <th style="border: 1px solid black; padding: 10px; width: 33%;">ผู้ดำเนินการ (Mover)</th>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {s1} )<br>เจ้าของเดิม
-                    </td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {s2} )<br>เจ้าของใหม่
-                    </td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {s3} )<br>ผู้ขนย้าย
-                    </td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s1} )<br>เจ้าของเดิม</td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s2} )<br>เจ้าของใหม่</td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s3} )<br>ผู้ขนย้าย</td>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {m1} )<br>หัวหน้าฝ่ายต้นทาง
-                    </td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {m2} )<br>หัวหน้าฝ่ายปลายทาง
-                    </td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">
-                        _______________________<br>( {m3} )<br>หัวหน้าฝ่ายขนย้าย
-                    </td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m1} )<br>หัวหน้าฝ่ายต้นทาง</td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m2} )<br>หัวหน้าฝ่ายปลายทาง</td>
+                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m3} )<br>หัวหน้าฝ่ายขนย้าย</td>
                 </tr>
             </table>
             <div style="margin-top: 20px; font-size: 10px; text-align: right; color: #666;">
@@ -140,6 +145,5 @@ if st.button("👁️ พรีวิวใบโอนย้าย และพ
         </div>
         """
         
-        # แสดงผล HTML ก้อนเดียวจบ
         st.markdown(html_content, unsafe_allow_html=True)
-        st.success("✅ พรีวิวสำเร็จ! กด Ctrl + P เพื่อพิมพ์เฉพาะใบเอกสาร (Sidebar จะถูกซ่อนอัตโนมัติ)")
+        st.success("✅ พร้อมพิมพ์แล้ว! กดปุ่ม Save/Print ในหน้าต่างเบราว์เซอร์ได้เลย (ส่วนเกินจะหายไปเอง)")
