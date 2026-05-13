@@ -215,18 +215,16 @@ if not df.empty:
                 # อัปเดตค่าลงใน DataFrame ตัวหลัก (บังคับเป็น object เพื่อไม่ให้ติดเรื่อง Dtype)
                 df = df.astype(object)
                 df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันที่ส่งเคลม"] = new_d_clm.strftime("%Y-%m-%d") if new_d_clm else ""
                 df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
                 df.at[idx, "สาขา"] = new_b
                 df.at[idx, "counter"] = new_c
                 df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
                 df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "Serial เครื่องที่เปลี่ยนใหม่"] = new_sn_new
                 df.at[idx, "สถานะ"] = new_s
                 
                 # ส่งข้อมูลกลับไปที่ Google Sheets
                 conn.update(worksheet=selected_sheet, data=df.astype(str))
-                st.success("✅ อัปเดตข้อมูลทั้ง 9 คอลัมน์เรียบร้อยแล้ว!")
+                st.success("✅ อัปเดตข้อมูลทั้ง 7 คอลัมน์เรียบร้อยแล้ว!")
                 st.rerun()
                 
             if b2.form_submit_button("🗑️ ลบรายการนี้ออก"):
