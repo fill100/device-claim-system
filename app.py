@@ -200,8 +200,6 @@ if not df.empty:
                 new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
                 # 5. Counter
                 new_c = st.text_input("Counter", value=str(row["counter"]))
-              
-
             with e3:
                 # 6. Serial เครื่องที่เสีย (หากแก้ตัวนี้ ระบบจะอัปเดตค่าใหม่ลงไป)
                 new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
