@@ -35,9 +35,9 @@ if 'available_sheets' not in st.session_state:
     st.session_state.available_sheets = INITIAL_SHEETS.copy()
 
 EXPECTED_COLUMNS = [
-    "วันที่รับแจ้ง", "วันที่ส่งเคลม", "วันทีนำไปติดตั้งใหม่", "สาขา", 
-    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", 
-    "Serial เครื่องที่เปลี่ยนใหม่", "สถานะ"
+    "วันที่รับแจ้ง", "วันทีนำไปติดตั้งใหม่", "สาขา", 
+    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์"
+    , "สถานะ"
 ]
 
 BRANCH_LIST = [
@@ -139,7 +139,7 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม"
             sn_f = st.text_input("Serial เครื่องเสีย (บังคับ)")
         with f2:
             stt = st.selectbox("สถานะ", ["inprogress", "Done"])
-            dt_clm = st.date_input("วันที่ส่งเคลม", value=None)
+            dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
             sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
         if st.form_submit_button("บันทึกข้อมูล"):
             if sn_f:
@@ -166,10 +166,6 @@ if not df.empty:
             with e1:
                 # 1. วันที่รับแจ้ง
                 new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
-                # 2. วันที่ส่งเคลม (ใช้ date_input เพื่อความสะดวก)
-                try: curr_d_clm = datetime.strptime(str(row["วันที่ส่งเคลม"]), "%Y-%m-%d")
-                except: curr_d_clm = None
-                new_d_clm = st.date_input("วันที่ส่งเคลม", value=curr_d_clm)
                 # 3. วันทีนำไปติดตั้งใหม่
                 try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
                 except: curr_d_ins = None
@@ -186,8 +182,6 @@ if not df.empty:
             with e3:
                 # 7. Serial เครื่องที่ส่งให้ศูนย์
                 new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                # 8. Serial เครื่องที่เปลี่ยนใหม่
-                new_sn_new = st.text_input("Serial เครื่องที่เปลี่ยนใหม่", value=str(row["Serial เครื่องที่เปลี่ยนใหม่"]))
                 # 9. สถานะ
                 new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
             
