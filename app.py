@@ -197,12 +197,13 @@ if not df.empty:
                 new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
                 # 4. สาขา
                 new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
+            with e2:
                 # 5. Counter
                 new_c = st.text_input("Counter", value=str(row["counter"]))
                 # 6. Serial เครื่องที่เสีย (หากแก้ตัวนี้ ระบบจะอัปเดตค่าใหม่ลงไป)
                 new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
 
-            with e2:
+            with e3:
                 # 7. Serial เครื่องที่ส่งให้ศูนย์
                 new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
                 # 9. สถานะ
