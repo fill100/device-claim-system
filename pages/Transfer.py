@@ -135,5 +135,28 @@ def create_transfer_pdf(data):
     pdf.cell(col_w, 10, f"( {data['receiver']} )", 0, 0, "C")
     pdf.cell(col_w, 10, f"( {data['sender']} )", 0, 0, "C")
     pdf.cell(col_w, 10, f"( {data['manager']} )", 0, 1, "C")
+    # --- ส่วนใน Streamlit ---
+if st.button("生成 PDF (สร้างไฟล์ PDF)"):
+    now_th = datetime.now() + timedelta(hours=7)
+    pdf_data = {
+        "date": now_th.strftime('%d/%m/%Y'),
+        "receiver": s2,
+        "sender": s1,
+        "manager": m3,
+        "to_loc": to_location,
+        "sn": target_sn,
+        "model": asset_info['Model Name (ชื่อรุ่น)'],
+        "reason": transfer_reason,
+        "date_ref": now_th.strftime('%Y%m%d')
+    }
+    
+    output_pdf = create_transfer_pdf(pdf_data)
+    
+    st.download_button(
+        label="📥 ดาวน์โหลดใบโอนย้าย (PDF)",
+        data=bytes(output_pdf),
+        file_name=f"Transfer_{target_sn}.pdf",
+        mime="application/pdf"
+    )
 
     return pdf.output()
