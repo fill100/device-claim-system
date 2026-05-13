@@ -66,7 +66,7 @@ def create_transfer_pdf(data):
             pdf.set_font('THSarabun', '', 14)
         
         pdf.set_x(x_pos[i]+7)
-        display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ.................."
+        display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
         pdf.cell(40, 8, display_name, 0, 0)
     pdf.ln(10)
 
