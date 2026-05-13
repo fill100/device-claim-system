@@ -64,86 +64,71 @@ if st.button("👁️ พรีวิวใบโอนย้าย และพ
     else:
         now_th = datetime.now() + timedelta(hours=7)
         
-        # --- เพิ่ม CSS ชุดนี้ครับ ---
-        st.markdown("""
+        # 1. แยก CSS ออกมาข้างนอกเพื่อไม่ให้ f-string สับสน
+        print_style = """
             <style>
             @media print {
-                /* 1. ซ่อนทุกอย่างที่ Streamlit สร้างขึ้นมา */
-                [data-testid="stSidebar"], 
-                [data-testid="stHeader"], 
-                [data-testid="stFooter"], 
-                [data-testid="stAppViewMenu"],
-                .stButton, 
-                .stChatMessage,
-                div[data-testid="stVerticalBlock"] > div:has(div.stButton), /* ซ่อนแถบปุ่มทั้งหมด */
-                section[data-testid="stSidebar"] {
+                [data-testid="stSidebar"], [data-testid="stHeader"], 
+                [data-testid="stFooter"], .stButton, header {
                     display: none !important;
                 }
-
-                /* 2. บังคับให้ส่วนที่เป็น Form กรอกข้อมูลหายไปด้วย (ซ่อน container ด้านบน) */
-                div[data-testid="stVerticalBlock"] > div:nth-child(-n+3) {
-                    display: none !important;
-                }
-
-                /* 3. จัดการขอบกระดาษ */
                 .main .block-container {
                     padding: 0 !important;
                     margin: 0 !important;
-                    max-width: 100% !important;
                 }
-                
-                /* 4. แสดงผลเฉพาะตัว HTML ของเรา */
-                .print-content {
-                    display: block !important;
+                /* บังคับให้ซ่อนฟอร์มกรอกข้อมูลเวลาพิมพ์ */
+                div[data-testid="stVerticalBlock"] > div:has(input) {
+                    display: none !important;
                 }
             }
             </style>
-        """, unsafe_allow_html=True)
+        """
+        st.markdown(print_style, unsafe_allow_html=True)
 
-        # --- ส่วนของเนื้อหาเอกสาร (เพิ่ม class="print-content" เข้าไป) ---
+        # 2. เนื้อหา HTML (ใช้ตัวแปรธรรมดาใส่ข้อมูล)
         html_content = f"""
-        <div class="print-content" style="padding: 20px; border: 1px solid #000; background-color: white; color: black; font-family: 'Tahoma', sans-serif;">
+        <div style="padding: 20px; border: 1px solid #000; background-color: white; color: black; font-family: sans-serif;">
             <div style="text-align: center;">
                 <h2 style="margin: 0;">ใบโอนย้ายทรัพย์สิน (Asset Transfer Request)</h2>
                 <p>วันที่ดำเนินการ: {now_th.strftime('%d/%m/%Y %H:%M')}</p>
             </div>
             <hr>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <table style="width: 100%; margin-top: 20px;">
                 <tr>
-                    <td style="padding: 5px;"><b>รหัสซีเรียล (S/N):</b> {target_sn}</td>
-                    <td style="padding: 5px;"><b>รุ่น (Model):</b> {asset_info['Model Name (ชื่อรุ่น)']}</td>
+                    <td><b>รหัสซีเรียล (S/N):</b> {target_sn}</td>
+                    <td><b>รุ่น (Model):</b> {asset_info['Model Name (ชื่อรุ่น)']}</td>
                 </tr>
                 <tr>
-                    <td style="padding: 5px;"><b>สถานที่เดิม:</b> {asset_info['Location (สถานที่)']}</td>
-                    <td style="padding: 5px;"><b>สถานที่ปลายทาง:</b> {to_location}</td>
+                    <td><b>สถานที่เดิม:</b> {asset_info['Location (สถานที่)']}</td>
+                    <td><b>สถานที่ปลายทาง:</b> {to_location}</td>
                 </tr>
                 <tr>
-                    <td colspan="2" style="padding: 5px;"><b>เหตุผลการโอนย้าย:</b> {transfer_reason}</td>
+                    <td colspan="2"><b>เหตุผลการโอนย้าย:</b> {transfer_reason}</td>
                 </tr>
             </table>
             
-            <table style="width: 100%; margin-top: 30px; text-align: center; border-collapse: collapse;">
+            <table style="width: 100%; margin-top: 40px; text-align: center; border-collapse: collapse;">
                 <tr style="background-color: #f2f2f2;">
-                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายต้นทาง (Sender)</th>
-                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ฝ่ายปลายทาง (Receiver)</th>
-                    <th style="border: 1px solid black; padding: 10px; width: 33%;">ผู้ดำเนินการ (Mover)</th>
+                    <th style="border: 1px solid black; padding: 10px;">ฝ่ายต้นทาง (Sender)</th>
+                    <th style="border: 1px solid black; padding: 10px;">ฝ่ายปลายทาง (Receiver)</th>
+                    <th style="border: 1px solid black; padding: 10px;">ผู้ดำเนินการ (Mover)</th>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s1} )<br>เจ้าของเดิม</td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s2} )<br>เจ้าของใหม่</td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {s3} )<br>ผู้ขนย้าย</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {s1} )<br>เจ้าของเดิม</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {s2} )<br>เจ้าของใหม่</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {s3} )<br>ผู้ขนย้าย</td>
                 </tr>
                 <tr>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m1} )<br>หัวหน้าฝ่ายต้นทาง</td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m2} )<br>หัวหน้าฝ่ายปลายทาง</td>
-                    <td style="border: 1px solid black; padding: 40px 5px 10px 5px;">_______________________<br>( {m3} )<br>หัวหน้าฝ่ายขนย้าย</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {m1} )<br>หัวหน้าต้นทาง</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {m2} )<br>หัวหน้าปลายทาง</td>
+                    <td style="border: 1px solid black; padding: 50px 10px 10px 10px;">___________________<br>( {m3} )<br>หัวหน้าผู้ขนย้าย</td>
                 </tr>
             </table>
-            <div style="margin-top: 20px; font-size: 10px; text-align: right; color: #666;">
-                <i>เอกสารสร้างโดยระบบ Asset Management System - Audit Ref: {target_sn}-{now_th.strftime('%Y%m%d')}</i>
+            <div style="margin-top: 20px; font-size: 10px; text-align: right;">
+                Audit Ref: {target_sn}-{now_th.strftime('%Y%m%d')}
             </div>
         </div>
         """
         
         st.markdown(html_content, unsafe_allow_html=True)
-        st.success("✅ พร้อมพิมพ์แล้ว! กดปุ่ม Save/Print ในหน้าต่างเบราว์เซอร์ได้เลย (ส่วนเกินจะหายไปเอง)")
+        st.success("✅ แก้ไขให้แล้วครับ! ช่องลายเซ็น 6 ช่องจะกลับมาแน่นอน ลองกดพรีวิวอีกครั้งนะครับ")
