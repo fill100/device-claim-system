@@ -24,23 +24,46 @@ def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- ปรับปรุงการโหลด Font ใหม่ ---
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+    # --- ระบบค้นหา Font แบบยืดหยุ่น ---
+    # ลองหาไฟล์จากหลายๆ ที่ที่อาจเป็นไปได้
+    possible_paths = [
+        "pages/THSarabunNew.ttf",
+        "THSarabunNew.ttf",
+        os.path.join(os.path.dirname(__file__), "THSarabunNew.ttf")
+    ]
     
-    if os.path.exists(font_path):
-        # ลงทะเบียนแบบปกติ
-        pdf.add_font('THSarabun', '', font_path)
-        # ลงทะเบียน 'B' (ตัวหนา) โดยใช้ไฟล์เดิม (ถ้าไม่มีไฟล์ Bold แยก)
-        pdf.add_font('THSarabun', 'B', font_path) 
-        
-        pdf.set_font('THSarabun', 'B', 22) # คราวนี้จะไม่ Error แล้ว
-        font_main = 'THSarabun'
-    else:
-        pdf.set_font('Arial', 'B', 16)
-        font_main = 'Arial'
-        st.error(f"⚠️ ไม่พบไฟล์ฟอนต์ที่: {font_path}")
+    font_path = None
+    for path in possible_paths:
+        if os.path.exists(path):
+            font_path = path
+            break
 
+    if font_path:
+        # ลงทะเบียนทั้งแบบธรรมดาและแบบหนาโดยใช้ไฟล์เดียวกันเพื่อกัน Error set_font('...','B',...)
+        pdf.add_font('THSarabun', '', font_path)
+        pdf.add_font('THSarabun', 'B', font_path) 
+        font_main = 'THSarabun'
+        pdf.set_font(font_main, 'B', 22)
+    else:
+        # กรณีหาไม่เจอจริงๆ ให้ใช้ Arial และห้ามใส่ภาษาไทย (เพื่อไม่ให้แอปพัง)
+        font_main = 'Arial'
+        pdf.set_font(font_main, 'B', 16)
+        st.error(f"❌ ระบบยังหาไฟล์ฟอนต์ไม่พบ ลองตรวจสอบชื่อไฟล์ใน GitHub อีกครั้ง (ต้องตรงเป๊ะทุกตัวอักษร)")
+        # แสดงชื่อไฟล์ที่มีอยู่ในโฟลเดอร์ pages เพื่อช่วย Debug
+        try:
+            files_in_pages = os.listdir("pages")
+            st.write(f"ไฟล์ที่ตรวจพบในโฟลเดอร์ pages: {files_in_pages}")
+        except:
+            pass
+
+    # --- ส่วนการสร้างเนื้อหา (เหมือนเดิม) ---
+    # ใช้ฟังก์ชันช่วยตรวจสอบ ถ้าฟอนต์ไม่ใช่ไทย ให้โชว์อังกฤษแทน
+    def txt(thai, eng):
+        return thai if font_main == 'THSarabun' else eng
+
+    pdf.cell(0, 15, txt("แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", "IT Asset Handover Form"), 0, 1, "C")
+    # ... (โค้ดส่วนอื่นๆ ให้ใช้ฟังก์ชัน txt() ครอบไว้เพื่อความปลอดภัย)
+    
     # หัวข้อเอกสาร (ตามสไตล์รูป 576ca1)
     pdf.set_font(font_main, 'B', 22)
     pdf.cell(0, 15, "แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", 0, 1, "C")
