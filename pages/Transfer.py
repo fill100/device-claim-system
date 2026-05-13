@@ -74,7 +74,7 @@ def create_transfer_pdf(data):
     w_no = 15      # ลำดับ
     w_sn = 55      # Serial Number
     w_name = 55    # รายการอุปกรณ์
-    w_note = 75   # หมายเหตุ
+    w_note = 55   # หมายเหตุ
     h_cell = 10    # ความสูงช่องตาราง
 
     # หัวตาราง
