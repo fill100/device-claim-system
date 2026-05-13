@@ -69,13 +69,12 @@ def create_transfer_pdf(data):
     pdf.cell(80, 10, "รายการ/รุ่นอุปกรณ์", 1, 0, "C", True)
     pdf.cell(50, 10, "หมายเหตุ", 1, 1, "C", True)
 
-    pdf.set_font('THSarabun', '', 14)
-    # วนลูปสร้างแถว (ในที่นี้ตัวอย่างใส่ไป 5 แถว หรือตาม data['items'])
-    items = data.get('items', [(data['sn'], data['model'])]) # ถ้าไม่มีลิสต์ ให้เอาตัวเดียวเดิมมาใส่
-    for i, (sn, model) in enumerate(items, 1):
-        pdf.cell(10, 10, str(i), 1, 0, "C")
-        pdf.cell(50, 10, sn, 1, 0, "C")
-        pdf.cell(80, 10, model[:35], 1, 0, "L") # ตัดตัวอักษรถ้าสั้นไป
+# --- 3. ตารางรายการอุปกรณ์ ---
+    pdf.set_font('THSarabun', '', 13)
+    for i, item in enumerate(data['items'], 1):
+        pdf.cell(15, 10, str(i), 1, 0, "C")
+        pdf.cell(50, 10, str(item.get('sn', '-')), 1, 0, "C")
+        pdf.cell(75, 10, str(item.get('model', '-'))[:35], 1, 0, "L")
         pdf.cell(50, 10, "", 1, 1, "C")
     
     pdf.ln(5)
@@ -146,9 +145,8 @@ with st.container(border=True):
     with f3:
         it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
 
-# --- ส่วนการประมวลผล (บรรทัดที่ 145 เป็นต้นไป) ---
+# --- ประมวลผล ---
 if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
-    # ตรวจสอบตัวแปร s_new และ to_location (ต้องตรงกับที่ประกาศไว้ใน UI)
     if not s_new or not to_location:
         st.warning("⚠️ กรุณากรอกชื่อผู้รับและสถานที่ปลายทาง")
     elif not selected_sns:
@@ -156,26 +154,28 @@ if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
     else:
         now_th = datetime.now() + timedelta(hours=7)
         
-        # เตรียมข้อมูลอุปกรณ์ที่เลือก
+        # 1. เตรียม List ของอุปกรณ์ (ตรวจสอบคีย์ sn และ model)
         selected_items = []
         for sn in selected_sns:
-            # ดึงข้อมูลจาก DataFrame
             row = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == sn].iloc[0]
             selected_items.append({
-                "sn": sn,
-                "model": row['Model Name (ชื่อรุ่น)']
+                "sn": sn,  # ชื่อคีย์ต้องเป็น 'sn'
+                "model": row['Model Name (ชื่อรุ่น)']  # ชื่อคีย์ต้องเป็น 'model'
             })
 
-        # รวบรวมข้อมูลส่งเข้าฟังก์ชันสร้าง PDF
+        # 2. รวมข้อมูลทั้งหมด (ตรวจสอบชื่อตัวแปรที่รับจาก st.text_input)
         pdf_data = {
             "date": now_th.strftime('%d/%m/%Y'),
             "items": selected_items,
             "to_loc": to_location,
             "reason": transfer_reason,
+            # ส่งชื่อพนักงานทั้ง 3 คนเข้าไปด้วย
             "s_old": s_old,
             "s_new": s_new,
             "it_staff": it_staff
         }
+        
+        # ... (ส่วนสั่งสร้าง PDF เหมือนเดิม) ...
         
         try:
             # สร้าง PDF และบันทึกลง Session State
