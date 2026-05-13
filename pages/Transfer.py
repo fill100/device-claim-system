@@ -127,7 +127,7 @@ def create_transfer_pdf(data):
     return pdf.output()
 
 # --- ส่วน UI ---
-st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน (Full Version)")
+st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
 
 if "df_data" not in st.session_state:
     st.session_state.df_data = pd.DataFrame([{"เลขทรัพย์สิน/ชื่อรายการ": "", "หมายเหตุ": ""}])
