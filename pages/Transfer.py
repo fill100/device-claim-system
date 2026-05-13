@@ -31,7 +31,7 @@ def create_transfer_pdf(data):
     # 1. วางโลโก้ (ด้านซ้าย)
     if os.path.exists(logo_path):
         # ปรับ y=10 ให้โลโก้อยู่ในระดับที่สวยงาม
-        pdf.image(logo_path, x=10, y=10, w=45)
+        pdf.image(logo_path, x=10, y=10, w=60)
     
     # 2. ใส่ข้อมูลบริษัท (ชิดขวา)
     if os.path.exists(font_path):
@@ -58,10 +58,6 @@ def create_transfer_pdf(data):
     pdf.line(10, 35, 200, 35) 
     
     pdf.ln(12) # เว้นระยะก่อนเริ่มเนื้อหา
-    
-    # --- ส่วนหัวข้อแบบฟอร์ม ---
-    pdf.set_font('THSarabun' if os.path.exists(font_path) else 'Arial', 'B', 20)
-    pdf.cell(0, 15, "แบบฟอร์มการส่งมอบทรัพย์สินแผนก IT", 0, 1, "C")
     
     # --- จบส่วน Header ---
     
