@@ -1,15 +1,17 @@
 import streamlit as st
-st.markdown("""
-    <style>
-    [data-testid="stSidebarNav"] {display: none;} /* ซ่อนเมนูเดิมที่ชื่อ app/Wesgan */
-    [data-testid="stSidebarNavItems"] {display: none;}
-    </style>
-    """, unsafe_allow_html=True)
 import pandas as pd
 from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
 from streamlit_gsheets import GSheetsConnection
+
+# --- ตั้งค่าหน้ากระดาษและซ่อนเมนู ---
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;}
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Transfer Form", layout="wide")
 
@@ -19,7 +21,7 @@ with st.sidebar:
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
 
-# --- 1. ฟังก์ชันสร้าง PDF (แบบฝังฟอนต์ไทย) ---
+# --- 1. ฟังก์ชันสร้าง PDF ---
 def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
@@ -28,7 +30,7 @@ def create_transfer_pdf(data):
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
 
-    # --- 1. Header & Logo ---
+    # Header & Logo
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=10, y=10, w=45)
     
@@ -43,9 +45,8 @@ def create_transfer_pdf(data):
     pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
     pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
     
-    # วาดเส้นใต้สีเทาเข้ม
     pdf.set_draw_color(80, 80, 80)
-    pdf.set_line_width(0.8)
+    pdf.set_line_width(0.6)
     pdf.line(10, 35, 200, 35) 
     
     pdf.ln(12)
@@ -54,10 +55,10 @@ def create_transfer_pdf(data):
     pdf.set_font('THSarabun', '', 14)
     pdf.cell(0, 8, f"วันที่ดำเนินการ: {data['date']}", 0, 1, "R")
 
-    # --- 2. ส่วน Checkbox การดำเนินการ ---
+    # --- 2. ส่วน Checkbox ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
-    pdf.set_line_width(0.2)
+    pdf.set_line_width(0.2) # ปรับเส้น Checkbox ให้บางลง
     pdf.set_font('THSarabun', '', 14)
     pdf.rect(15, pdf.get_y()+2, 4, 4); pdf.set_x(22); pdf.cell(40, 8, "โอนย้ายปกติ", 0, 0)
     pdf.rect(55, pdf.get_y()+2, 4, 4); pdf.set_x(62); pdf.cell(40, 8, "ส่งซ่อม/เคลม", 0, 0)
@@ -65,17 +66,12 @@ def create_transfer_pdf(data):
     pdf.rect(135, pdf.get_y()+2, 4, 4); pdf.set_x(142); pdf.cell(40, 8, "อื่นๆ..................", 0, 1)
     pdf.ln(5)
 
-    # --- 3. ตารางรายการอุปกรณ์ (ปรับแก้ความกว้างให้ตรงกันเป๊ะ) ---
-    pdf.set_line_width(0.2)
+    # --- 3. ตารางรายการอุปกรณ์ ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     
-    # กำหนดความกว้างคอลัมน์ (รวมกันได้ 190 มม. พอดีหน้ากระดาษ A4)
-    w_no = 15      # ลำดับ
-    w_sn = 55      # Serial Number
-    w_name = 55    # รายการอุปกรณ์
-    w_note = 55   # หมายเหตุ
-    h_cell = 10    # ความสูงช่องตาราง
+    w_no, w_sn, w_name, w_note = 15, 55, 60, 60
+    h_cell = 10
 
     # หัวตาราง
     pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
@@ -88,32 +84,27 @@ def create_transfer_pdf(data):
     for i, item in enumerate(data['items'], 1):
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
         pdf.cell(w_sn, h_cell, str(item.get('sn', '-')), 1, 0, "C")
-        # ใส่ช่องว่างข้างหน้าเล็กน้อย ( f" {text}" ) เพื่อไม่ให้ตัวหนังสือติดเส้นขอบซ้าย
-        model_text = str(item.get('model', '-'))[:40]
-        pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
-        pdf.cell(w_note, h_cell, "", 1, 1, "C")
-    pdf.ln(3) 
-    if data.get('reason'):
-        pdf.set_font('THSarabun', 'B', 13)
-        pdf.cell(0, 7, "หมายเหตุ / เหตุผลการโอนย้าย:", 0, 1, "L")
-        pdf.set_font('THSarabun', '', 13)
-        # multi_cell จะช่วยให้ข้อความยาวๆ ตัดบรรทัดใหม่ให้เองครับ
-        pdf.multi_cell(0, 6, data['reason'], border=0, align="L")
         
+        model_text = str(item.get('model', '-'))[:35]
+        pdf.cell(w_name, h_cell, f" {model_text}", 1, 0, "L")
+        
+        # ใส่หมายเหตุเฉพาะบรรทัดแรก
+        note_text = data.get('reason', '') if i == 1 else ""
+        pdf.cell(w_note, h_cell, f" {note_text[:30]}", 1, 1, "L")
+    
     pdf.ln(5)
     pdf.set_font('THSarabun', 'B', 11)
     pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
 
-    # --- 4. ส่วนลายเซ็น 3 กลุ่ม (ปรับปรุงช่องไฟ) ---
+    # --- 4. ส่วนลายเซ็น 3 กลุ่ม ---
     pdf.ln(5)
-    w_sign = 63.3 # แบ่ง 190 มม. เป็น 3 ส่วนเท่าๆ กัน
+    w_sign = 63.3
     pdf.set_font('THSarabun', 'B', 11)
     
     pdf.cell(w_sign, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
     pdf.cell(w_sign, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
     pdf.cell(w_sign, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
 
-    # แถวที่ 1: ลายเซ็นพนักงาน/เจ้าของ
     pdf.ln(10)
     pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
     pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
@@ -124,7 +115,6 @@ def create_transfer_pdf(data):
     pdf.cell(w_sign, 5, f"( {data.get('s_new', '............................')} )", 0, 0, "C")
     pdf.cell(w_sign, 5, f"( {data.get('it_staff', '............................')} )", 0, 1, "C")
 
-    # แถวที่ 2: ลายเซ็นหัวหน้า
     pdf.ln(8)
     pdf.set_font('THSarabun', 'B', 11)
     pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
@@ -138,11 +128,11 @@ def create_transfer_pdf(data):
 
     return pdf.output()
 
-# --- UI ส่วนเลือกข้อมูล ---
+# --- 2. การเชื่อมต่อข้อมูลและ UI ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 df_asset = conn.read(worksheet="Asset Management", ttl="0")
 
-st.title("📦 ระบบออกใบโอนย้ายทรัพย์สิน (Multi-items)")
+st.title("📦 ระบบออกใบโอนย้ายทรัพย์สิน")
 
 if 'pdf_ready' not in st.session_state:
     st.session_state.pdf_ready = None
@@ -150,8 +140,7 @@ if 'pdf_ready' not in st.session_state:
 with st.container(border=True):
     c1, c2 = st.columns(2)
     with c1:
-        # เปลี่ยนเป็น multiselect เลือกได้หลายตัว
-        selected_sns = st.multiselect("เลือก Serial Number (เลือกได้หลายรายการ)", df_asset["Serial Number (เลขซีเรียล)"].unique())
+        selected_sns = st.multiselect("เลือก Serial Number", df_asset["Serial Number (เลขซีเรียล)"].unique())
         to_location = st.text_input("สถานที่ปลายทาง / หน่วยงานที่รับโอน")
     with c2:
         transfer_reason = st.text_area("หมายเหตุ / เหตุผลการโอนย้าย")
@@ -165,51 +154,42 @@ with st.container(border=True):
     with f3:
         it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
 
-# --- ประมวลผล ---
+# --- 3. ส่วนการประมวลผล ---
 if st.button("🚀 เตรียมไฟล์ PDF (Generate)"):
-    if not s_new or not to_location:
-        st.warning("⚠️ กรุณากรอกชื่อผู้รับและสถานที่ปลายทาง")
-    elif not selected_sns:
-        st.warning("⚠️ กรุณาเลือก Serial Number อย่างน้อย 1 รายการ")
+    if not s_new or not to_location or not selected_sns:
+        st.warning("⚠️ กรุณากรอกข้อมูลให้ครบและเลือกอุปกรณ์อย่างน้อย 1 รายการ")
     else:
         now_th = datetime.now() + timedelta(hours=7)
         
-        # 1. เตรียม List ของอุปกรณ์ (ตรวจสอบคีย์ sn และ model)
         selected_items = []
         for sn in selected_sns:
             row = df_asset[df_asset["Serial Number (เลขซีเรียล)"] == sn].iloc[0]
             selected_items.append({
-                "sn": sn,  # ชื่อคีย์ต้องเป็น 'sn'
-                "model": row['Model Name (ชื่อรุ่น)']  # ชื่อคีย์ต้องเป็น 'model'
+                "sn": sn,
+                "model": row['Model Name (ชื่อรุ่น)']
             })
 
-        # 2. รวมข้อมูลทั้งหมด (ตรวจสอบชื่อตัวแปรที่รับจาก st.text_input)
         pdf_data = {
             "date": now_th.strftime('%d/%m/%Y'),
             "items": selected_items,
             "to_loc": to_location,
             "reason": transfer_reason,
-            # ส่งชื่อพนักงานทั้ง 3 คนเข้าไปด้วย
             "s_old": s_old,
             "s_new": s_new,
             "it_staff": it_staff
         }
         
-        # ... (ส่วนสั่งสร้าง PDF เหมือนเดิม) ...
-        
         try:
-            # สร้าง PDF และบันทึกลง Session State
             pdf_out = create_transfer_pdf(pdf_data)
             st.session_state.pdf_ready = bytes(pdf_out)
-            st.success(f"✅ เตรียมไฟล์สำหรับอุปกรณ์ {len(selected_sns)} รายการสำเร็จ!")
+            st.success("✅ สร้างไฟล์สำเร็จ!")
         except Exception as e:
-            st.error(f"เกิดข้อผิดพลาดในการสร้าง PDF: {e}")
+            st.error(f"เกิดข้อผิดพลาด: {e}")
 
-# --- ส่วนปุ่มดาวน์โหลด ---
 if st.session_state.pdf_ready is not None:
     st.download_button(
-        label="📥 คลิกเพื่อดาวน์โหลด PDF",
+        label="📥 ดาวน์โหลดไฟล์ PDF",
         data=st.session_state.pdf_ready,
-        file_name=f"Transfer_Note_{datetime.now().strftime('%Y%m%d')}.pdf",
+        file_name=f"Transfer_{datetime.now().strftime('%Y%m%d')}.pdf",
         mime="application/pdf"
     )
