@@ -5,6 +5,12 @@ from streamlit_gsheets import GSheetsConnection
 
 st.set_page_config(page_title="Transfer Form", layout="wide")
 
+with st.sidebar:
+    st.markdown("# 💻 IT Management")
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
+    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+
 # --- 1. การเชื่อมต่อข้อมูล ---
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
