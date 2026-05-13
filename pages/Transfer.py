@@ -70,8 +70,8 @@ def create_transfer_pdf(data):
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     
-    w_no, w_sn, w_name, w_note = 15, 55, 60, 60
-    h_cell = 10
+    w_no, w_sn, w_name, w_note = 15, 55, 45, 65
+    h_cell = 20
 
     # หัวตาราง
     pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
