@@ -130,7 +130,7 @@ c2.markdown(f'<div style="background-color:#FFD700; padding:10px; border-radius:
 c3.markdown(f'<div style="background-color:#28a745; padding:10px; border-radius:10px; text-align:center; color:white;"><b>Done:</b> {done}</div>', unsafe_allow_html=True)
 
 from datetime import datetime, timedelta
-# --- 5. เพิ่มรายการใหม่ ---
+# --- 5. เพิ่มรายการใหม่ (จัดระเบียบย่อหน้าใหม่ทั้งหมด) ---
 with st.expander("➕ เพิ่มรายการแจ้งซ่อม"):
     with st.form("add_form", clear_on_submit=True):
         f1, f2 = st.columns(2)
@@ -142,9 +142,13 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม"
             stt = st.selectbox("สถานะ", ["inprogress", "Done"])
             dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
             sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
-       if st.form_submit_button("บันทึกข้อมูล"):
+            
+        # บรรทัดนี้ต้องอยู่ตรงกับ f1, f2 (ภายใต้ with st.form)
+        submit_btn = st.form_submit_button("บันทึกข้อมูล")
+
+        if submit_btn:
             if sn_f:
-                # แก้ไขปัญหาเวลาไม่ตรง: ปรับจาก UTC เป็นเวลาไทย (UTC+7)
+                # ปรับเวลาไทย UTC+7
                 now_thailand = datetime.now() + timedelta(hours=7)
                 time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
                 
@@ -158,15 +162,17 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม"
                     "Serial เครื่องที่เปลี่ยนใหม่": sn_n
                 }])
                 
-                # รวมข้อมูลและอัปเดต
-                df = pd.concat([df, new_row], ignore_index=True).astype(str)
-                conn.update(worksheet=selected_sheet, data=df)
-                
-                st.success(f"บันทึกข้อมูลสำเร็จเมื่อเวลา {time_str}")
-                st.rerun()
+                # รวมข้อมูลและอัปเดตไปยัง Google Sheets
+                try:
+                    df = pd.concat([df, new_row], ignore_index=True).astype(str)
+                    conn.update(worksheet=selected_sheet, data=df)
+                    
+                    st.success(f"บันทึกข้อมูลสำเร็จเมื่อเวลา {time_str}")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดในการเชื่อมต่อ: {e}")
             else:
                 st.error("กรุณาระบุ Serial เครื่องที่เสีย")
-
 # --- 6. แก้ไขและลบแถว (ปรับปรุงให้แก้ไขได้ครบทุกคอลัมน์) ---
 if not df.empty:
     with st.expander("📝 แก้ไข หรือ ลบรายการ"):
