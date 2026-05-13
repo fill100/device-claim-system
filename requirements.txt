@@ -1,3 +1,5 @@
 streamlit
 pandas
 st-gsheets-connection
+import pytz
+now_thailand = datetime.now(pytz.timezone('Asia/Bangkok')).strftime("%Y-%m-%d %H:%M")
