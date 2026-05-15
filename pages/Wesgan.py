@@ -33,7 +33,7 @@ try:
 except:
     df = pd.DataFrame(columns=ASSET_COLUMNS)
 
-# --- 4. จัดการ State สำหรับการแก้ไข (ป้องกันอาการกระพริบ) ---
+# --- 4. จัดการ State สำหรับการแก้ไข ---
 if "edit_data" not in st.session_state:
     st.session_state.edit_data = None
 if "row_index" not in st.session_state:
@@ -60,16 +60,14 @@ view_df = df.copy()
 if filter_model != "ทั้งหมด":
     view_df = view_df[view_df["Model Name (ชื่อรุ่น)"] == filter_model]
 
-# --- 6. UI หลัก ---
+# --- 6. UI หลัก (Form สำหรับเพิ่ม/แก้ไขข้อมูลหลัก) ---
 st.title("🛡️ Asset Management")
 
-# ส่วนของ Form (สลับโหมดระหว่าง เพิ่มใหม่ กับ แก้ไข)
 is_editing = st.session_state.edit_data is not None
 expander_label = "📝 แก้ไขข้อมูลทรัพย์สิน" if is_editing else "➕ ลงทะเบียนทรัพย์สินใหม่"
 
 with st.expander(expander_label, expanded=is_editing):
     with st.form("asset_form", clear_on_submit=True):
-        # ดึงค่าเดิมมาใส่ถ้าอยู่ในโหมดแก้ไข
         current_val = st.session_state.edit_data if is_editing else {}
         
         col1, col2 = st.columns(2)
@@ -79,7 +77,6 @@ with st.expander(expander_label, expanded=is_editing):
         with col2:
             input_loc = st.text_input("Location", value=current_val.get("Location (สถานที่)", ""))
             
-            # จัดการวันที่
             try:
                 if is_editing and current_val.get("วันที่ซื้อ"):
                     default_date = datetime.strptime(current_val.get("วันที่ซื้อ"), "%d-%m-%Y")
@@ -110,16 +107,13 @@ with st.expander(expander_label, expanded=is_editing):
                 
                 try:
                     if is_editing:
-                        # อัปเดตทับแถวเดิมโดยใช้ index จริงจากต้นฉบับ
                         df.iloc[st.session_state.row_index] = updated_row_data
                         success_msg = "อัปเดตข้อมูลเรียบร้อยแล้ว!"
                     else:
-                        # เพิ่มข้อมูลใหม่ต่อท้าย
                         new_row_df = pd.DataFrame([updated_row_data])
                         df = pd.concat([df, new_row_df], ignore_index=True)
                         success_msg = "ลงทะเบียนใหม่เรียบร้อยแล้ว!"
                     
-                    # บันทึกลง Google Sheets
                     conn.update(worksheet="Asset Management", data=df.astype(str))
                     st.success(success_msg)
                     reset_edit_state()
@@ -129,7 +123,7 @@ with st.expander(expander_label, expanded=is_editing):
             else:
                 st.error("กรุณาระบุ Serial Number")
 
-# --- 7. ส่วนแสดงผลตารางและค้นหา ---
+# --- 7. ส่วนแสดงผลตารางและแก้ไขสถานที่ (Update ส่วนนี้) ---
 st.divider()
 c1, c2 = st.columns([3, 1])
 
@@ -141,7 +135,6 @@ with c1:
 
 with c2:
     st.write("📊 Report")
-    # ปุ่มดาวน์โหลด CSV (ใช้ utf-8-sig เพื่อให้ Excel เปิดภาษาไทยได้)
     csv_data = view_df.to_csv(index=False).encode('utf-8-sig')
     st.download_button(
         label="📥 Download CSV",
@@ -151,25 +144,29 @@ with c2:
         use_container_width=True
     )
 
-st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ")
+st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ (คลิกที่ช่องสถานที่เพื่อแก้ไขได้ทันที)")
 
-# ตารางแสดงข้อมูลพร้อมระบบเลือกแถวเพื่อแก้ไข
-selection_event = st.dataframe(
-    view_df, 
-    use_container_width=True, 
+# ใช้ data_editor เพื่อให้แก้ไข Location ได้
+edited_view_df = st.data_editor(
+    view_df,
+    use_container_width=True,
     hide_index=False,
-    on_select="rerun",
-    selection_mode="single-row"
+    column_config={
+        "Serial Number (เลขซีเรียล)": st.column_config.TextColumn(disabled=True),
+        "Model Name (ชื่อรุ่น)": st.column_config.TextColumn(disabled=True),
+        "วันที่ซื้อ": st.column_config.TextColumn(disabled=True),
+        "Location (สถานที่)": st.column_config.TextColumn(disabled=False) # เปิดให้แก้ได้
+    },
+    key="bulk_edit_location"
 )
 
-# ตรรกะการเลือกแถวเพื่อเข้าสู่โหมดแก้ไข
-if selection_event.selection.rows:
-    selected_row_index_in_view = selection_event.selection.rows[0]
-    # สำคัญ: หา Index จริงจาก DataFrame ต้นฉบับ (df) ไม่ใช่จาก view_df ที่ถูกกรอง
-    actual_df_index = view_df.index[selected_row_index_in_view]
-    
-    # ป้องกันการ rerun ซ้ำซ้อนถ้าเป็นแถวเดิม
-    if st.session_state.row_index != actual_df_index:
-        st.session_state.row_index = actual_df_index
-        st.session_state.edit_data = df.iloc[actual_df_index].to_dict()
+# ปุ่มบันทึกการแก้ไขสถานที่
+if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง"):
+    try:
+        # อัปเดตข้อมูลที่แก้กลับไปใน DataFrame หลัก
+        df.update(edited_view_df)
+        conn.update(worksheet="Asset Management", data=df.astype(str))
+        st.success("บันทึกการเปลี่ยนสถานที่เรียบร้อย!")
         st.rerun()
+    except Exception as e:
+        st.error(f"ไม่สามารถบันทึกได้: {e}")
