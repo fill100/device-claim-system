@@ -179,72 +179,60 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (คงเดิม) ---
-with st.expander("➕ เพิ่มรายการแจ้งซ่อม"):
-    with st.form("add_form", clear_on_submit=True):
-        f1, f2 = st.columns(2)
-        with f1:
-            br = st.selectbox("สาขา", BRANCH_LIST)
-            cnt = st.text_input("Counter")
-            sn_f = st.text_input("Serial เครื่องเสีย (บังคับ)")
-        with f2:
-            stt = st.selectbox("สถานะ", ["inprogress", "Done"])
-            dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
-            sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
+# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (ปรับปรุงใหม่: รองรับการเพิ่มหลายรายการพร้อมกัน) ---
+with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
+    # ตรวจสอบและตั้งค่าพื้นที่เก็บข้อมูลตารางกรอกชั่วคราว
+    if "input_buffer" not in st.session_state:
+        st.session_state.input_buffer = pd.DataFrame(columns=[
+            "สาขา", "counter", "Serial เครื่องที่เสีย (บังคับ)", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
+        ])
+        # ใส่แถวเริ่มต้นไว้ให้ 1 แถวเพื่อให้ง่ายต่อการพิมพ์เริ่มต้น
+        st.session_state.input_buffer.loc[0] = ["One Bangkok", "", "", "", "inprogress"]
+
+    st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
+    
+    # ตัวแปลงตารางกรอกข้อมูลอัจฉริยะ (Data Editor)
+    edited_input = st.data_editor(
+        st.session_state.input_buffer,
+        num_rows="dynamic", # ยืดหยุ่น เพิ่ม/ลบ แถวได้เองตามต้องการ
+        column_config={
+            "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
+            "counter": st.column_config.TextColumn("Counter"),
+            "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
+            "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
+            "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
+        },
+        use_container_width=True,
+        key="bulk_editor"
+    )
+
+    # ปุ่มบันทึกข้อมูลทั้งหมดลง Google Sheets ทีเดียว
+    if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
+        # กรองข้อมูลเอาเฉพาะแถวที่กรอก Serial เครื่องเสียจริง ๆ (ตัดแถวว่างออก)
+        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].str.strip() != ""]
         
-        if st.form_submit_button("บันทึกข้อมูล"):
-            if sn_f:
-                now_thailand = datetime.now() + timedelta(hours=7)
-                time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
-                new_row = pd.DataFrame([{
-                    "วันที่รับแจ้ง": time_str, "วันทีนำไปติดตั้งใหม่": dt_clm.strftime("%Y-%m-%d") if dt_clm else "",
-                    "สาขา": br, "counter": cnt, "Serial เครื่องที่เสีย": sn_f, "สถานะ": stt,
-                    "Serial เครื่องที่ส่งให้ศูนย์": sn_n
-                }])
-                df = pd.concat([df, new_row], ignore_index=True).astype(str)
-                conn.update(worksheet=selected_sheet, data=df)
-                st.success("บันทึกข้อมูลสำเร็จ!")
-                st.rerun()
-
-# --- 7. ส่วนแก้ไข/ลบ (คงเดิม) ---
-if not df.empty:
-    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-        row = df.loc[idx]
-        with st.form("edit_full_form"):
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
-                try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
-                except: curr_d_ins = None
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_c = st.text_input("Counter", value=str(row["counter"]))
-            with e3:
-                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-            if st.form_submit_button("💾 บันทึกการแก้ไข"):
-                df = df.astype(object)
-                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                df.at[idx, "สาขา"] = new_b
-                df.at[idx, "counter"] = new_c
-                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "สถานะ"] = new_s
-                conn.update(worksheet=selected_sheet, data=df.astype(str))
-                st.success("อัปเดตเรียบร้อย!")
-                st.rerun()
-
-# --- 8. ตารางผลลัพธ์ ---
-st.divider()
-view = df.copy()
-if q:
-    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-    view = view[mask]
-
-st.dataframe(view, use_container_width=True, hide_index=True)
+        if not valid_rows.empty:
+            now_thailand = datetime.now() + timedelta(hours=7)
+            time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+            
+            # แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับ Google Sheets
+            new_rows_list = []
+            for _, row in valid_rows.iterrows():
+                new_rows_list.append({
+                    "วันที่รับแจ้ง": time_str,
+                    "วันทีนำไปติดตั้งใหม่": "", # ปล่อยว่างไว้สำหรับไปใส่ในส่วนแก้ไขตอนติดตั้งจริง
+                    "สาขา": row["สาขา"],
+                    "counter": row["counter"],
+                    "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
+                    "Serial เครื่องที่ส่งให้ศูนย์": row["Serial เครื่องที่ส่งให้ศูนย์"],
+                    "สถานะ": row["สถานะ"]
+                })
+            
+            new_df_to_add = pd.DataFrame(new_rows_list)
+            
+            # ผสานข้อมูลเดิมและข้อมูลใหม่เข้าด้วยกัน
+            df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
+            
+            try:
+                # อัปเดตขึ้น Google Sheets
+                conn.update
