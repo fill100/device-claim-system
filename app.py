@@ -179,18 +179,22 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert) ---
+# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert - อัปเดตระบบ Reset ตาราง) ---
 with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
-    if "input_buffer" not in st.session_state:
-        st.session_state.input_buffer = pd.DataFrame(columns=[
-            "สาขา", "counter", "Serial เครื่องที่เสีย (บังคับ)", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
-        ])
-        st.session_state.input_buffer.loc[0] = ["One Bangkok", "", "", "", "inprogress"]
+    # ใช้เวอร์ชันตัวเลขเพื่อนับรอบการรีเซ็ตตารางกรอกข้อมูล
+    if "editor_version" not in st.session_state:
+        st.session_state.editor_version = 0
+
+    # สร้างโครงสร้างข้อมูลเริ่มต้นทุกครั้งที่รีเซ็ตตารางใหม่
+    default_buffer = pd.DataFrame([{
+        "สาขา": "One Bangkok", "counter": "", "Serial เครื่องที่เสีย (บังคับ)": "", "Serial เครื่องที่ส่งให้ศูนย์": "", "สถานะ": "inprogress"
+    }])
 
     st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
     
+    # กำหนด key โดยใช้เวอร์ชันผูกเข้าไปด้วย (เช่น bulk_editor_0, bulk_editor_1) เพื่อบังคับรีเซ็ตหน้าจอเมื่อค่าเปลี่ยน
     edited_input = st.data_editor(
-        st.session_state.input_buffer,
+        default_buffer,
         num_rows="dynamic",
         column_config={
             "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
@@ -200,11 +204,14 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
             "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
         },
         use_container_width=True,
-        key="bulk_editor"
+        key=f"bulk_editor_{st.session_state.editor_version}"
     )
 
     if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
-        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].str.strip() != ""]
+        # กรองข้อมูลเอาเฉพาะแถวที่กรอก Serial เครื่องเสียจริง ๆ (และไม่เป็นค่าว่างหรือ None)
+        valid_rows = edited_input[
+            edited_input["Serial เครื่องที่เสีย (บังคับ)"].fillna("").str.strip() != ""
+        ]
         
         if not valid_rows.empty:
             now_thailand = datetime.now() + timedelta(hours=7)
@@ -212,13 +219,16 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
             
             new_rows_list = []
             for _, row in valid_rows.iterrows():
+                # ตรวจสอบคำว่า None ที่อาจหลุดมาจากตารางเพื่อล้างให้เป็นช่องว่าง
+                sn_center = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).strip().lower() == "none" else row["Serial เครื่องที่ส่งให้ศูนย์"]
+                
                 new_rows_list.append({
                     "วันที่รับแจ้ง": time_str,
                     "วันทีนำไปติดตั้งใหม่": "",
                     "สาขา": row["สาขา"],
                     "counter": row["counter"],
                     "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
-                    "Serial เครื่องที่ส่งให้ศูนย์": row["Serial เครื่องที่ส่งให้ศูนย์"],
+                    "Serial เครื่องที่ส่งให้ศูนย์": sn_center,
                     "สถานะ": row["สถานะ"]
                 })
             
@@ -228,14 +238,16 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
             try:
                 conn.update(worksheet=selected_sheet, data=df)
                 st.success(f"🎉 บันทึกข้อมูลเรียบร้อยแล้วทั้งหมด {len(new_rows_list)} รายการ!")
-                del st.session_state.input_buffer
+                
+                # เพิ่มลำดับเวอร์ชัน เพื่อเปลี่ยน Key ของตาราง ส่งผลให้ตารางเคลียร์ค่าว่างทันที
+                st.session_state.editor_version += 1
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
         else:
             st.warning("⚠️ โปรดกรอกข้อมูลในช่อง 'Serial เครื่องที่เสีย' อย่างน้อย 1 รายการก่อนกดบันทึก")
 
-# --- 7. ส่วนแก้ไข/ลบ (แก้ไขโครงสร้างเพื่อป้องกัน SyntaxError เรียบร้อย) ---
+# --- 7. ส่วนแก้ไข/ลบ ---
 if not df.empty:
     with st.expander("📝 แก้ไข หรือ ลบรายการ"):
         sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
@@ -246,8 +258,6 @@ if not df.empty:
             e1, e2, e3 = st.columns(3)
             with e1:
                 new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
-                
-                # แยกบล็อก try-except ให้ถูกต้องชัดเจน
                 try:
                     curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
                 except Exception:
