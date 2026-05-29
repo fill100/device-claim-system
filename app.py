@@ -97,7 +97,7 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar (คงเดิมทุกอย่าง) ---
+# --- 3. Sidebar ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     st.page_link("app.py", label="Device Claim", icon="📑")
@@ -157,7 +157,7 @@ except Exception:
 with col_search:
     q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
 
-# --- 5. Dashboard Metrics (ปรับสีตัวหนังสือให้ดำเข้ม อ่านออกแน่นอน) ---
+# --- 5. Dashboard Metrics ---
 status_col = df["สถานะ"].str.strip().str.lower()
 inprogress = len(df[status_col == "inprogress"])
 done = len(df[status_col == "done"])
@@ -179,60 +179,5 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (ปรับปรุงใหม่: รองรับการเพิ่มหลายรายการพร้อมกัน) ---
-with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
-    # ตรวจสอบและตั้งค่าพื้นที่เก็บข้อมูลตารางกรอกชั่วคราว
-    if "input_buffer" not in st.session_state:
-        st.session_state.input_buffer = pd.DataFrame(columns=[
-            "สาขา", "counter", "Serial เครื่องที่เสีย (บังคับ)", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
-        ])
-        # ใส่แถวเริ่มต้นไว้ให้ 1 แถวเพื่อให้ง่ายต่อการพิมพ์เริ่มต้น
-        st.session_state.input_buffer.loc[0] = ["One Bangkok", "", "", "", "inprogress"]
-
-    st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
-    
-    # ตัวแปลงตารางกรอกข้อมูลอัจฉริยะ (Data Editor)
-    edited_input = st.data_editor(
-        st.session_state.input_buffer,
-        num_rows="dynamic", # ยืดหยุ่น เพิ่ม/ลบ แถวได้เองตามต้องการ
-        column_config={
-            "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
-            "counter": st.column_config.TextColumn("Counter"),
-            "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
-            "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
-            "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
-        },
-        use_container_width=True,
-        key="bulk_editor"
-    )
-
-    # ปุ่มบันทึกข้อมูลทั้งหมดลง Google Sheets ทีเดียว
-    if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
-        # กรองข้อมูลเอาเฉพาะแถวที่กรอก Serial เครื่องเสียจริง ๆ (ตัดแถวว่างออก)
-        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].str.strip() != ""]
-        
-        if not valid_rows.empty:
-            now_thailand = datetime.now() + timedelta(hours=7)
-            time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
-            
-            # แปลงข้อมูลให้อยู่ในโครงสร้างเดียวกับ Google Sheets
-            new_rows_list = []
-            for _, row in valid_rows.iterrows():
-                new_rows_list.append({
-                    "วันที่รับแจ้ง": time_str,
-                    "วันทีนำไปติดตั้งใหม่": "", # ปล่อยว่างไว้สำหรับไปใส่ในส่วนแก้ไขตอนติดตั้งจริง
-                    "สาขา": row["สาขา"],
-                    "counter": row["counter"],
-                    "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
-                    "Serial เครื่องที่ส่งให้ศูนย์": row["Serial เครื่องที่ส่งให้ศูนย์"],
-                    "สถานะ": row["สถานะ"]
-                })
-            
-            new_df_to_add = pd.DataFrame(new_rows_list)
-            
-            # ผสานข้อมูลเดิมและข้อมูลใหม่เข้าด้วยกัน
-            df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
-            
-            try:
-                # อัปเดตขึ้น Google Sheets
-                conn.update
+# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert) ---
+with st
