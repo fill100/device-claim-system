@@ -180,4 +180,106 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert) ---
-with st
+with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
+    if "input_buffer" not in st.session_state:
+        st.session_state.input_buffer = pd.DataFrame(columns=[
+            "สาขา", "counter", "Serial เครื่องที่เสีย (บังคับ)", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
+        ])
+        st.session_state.input_buffer.loc[0] = ["One Bangkok", "", "", "", "inprogress"]
+
+    st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
+    
+    edited_input = st.data_editor(
+        st.session_state.input_buffer,
+        num_rows="dynamic",
+        column_config={
+            "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
+            "counter": st.column_config.TextColumn("Counter"),
+            "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
+            "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
+            "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
+        },
+        use_container_width=True,
+        key="bulk_editor"
+    )
+
+    if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
+        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].str.strip() != ""]
+        
+        if not valid_rows.empty:
+            now_thailand = datetime.now() + timedelta(hours=7)
+            time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+            
+            new_rows_list = []
+            for _, row in valid_rows.iterrows():
+                new_rows_list.append({
+                    "วันที่รับแจ้ง": time_str,
+                    "วันทีนำไปติดตั้งใหม่": "",
+                    "สาขา": row["สาขา"],
+                    "counter": row["counter"],
+                    "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
+                    "Serial เครื่องที่ส่งให้ศูนย์": row["Serial เครื่องที่ส่งให้ศูนย์"],
+                    "สถานะ": row["สถานะ"]
+                })
+            
+            new_df_to_add = pd.DataFrame(new_rows_list)
+            df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
+            
+            try:
+                conn.update(worksheet=selected_sheet, data=df)
+                st.success(f"🎉 บันทึกข้อมูลเรียบร้อยแล้วทั้งหมด {len(new_rows_list)} รายการ!")
+                del st.session_state.input_buffer
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
+        else:
+            st.warning("⚠️ โปรดกรอกข้อมูลในช่อง 'Serial เครื่องที่เสีย' อย่างน้อย 1 รายการก่อนกดบันทึก")
+
+# --- 7. ส่วนแก้ไข/ลบ (แก้ไขโครงสร้างเพื่อป้องกัน SyntaxError เรียบร้อย) ---
+if not df.empty:
+    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
+        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
+        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
+        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
+        row = df.loc[idx]
+        with st.form("edit_full_form"):
+            e1, e2, e3 = st.columns(3)
+            with e1:
+                new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
+                
+                # แยกบล็อก try-except ให้ถูกต้องชัดเจน
+                try:
+                    curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
+                except Exception:
+                    curr_d_ins = None
+                    
+                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
+                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
+            with e2:
+                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
+                new_c = st.text_input("Counter", value=str(row["counter"]))
+            with e3:
+                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
+                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
+            
+            if st.form_submit_button("💾 บันทึกการแก้ไข"):
+                df = df.astype(object)
+                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
+                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
+                df.at[idx, "สาขา"] = new_b
+                df.at[idx, "counter"] = new_c
+                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
+                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
+                df.at[idx, "สถานะ"] = new_s
+                conn.update(worksheet=selected_sheet, data=df.astype(str))
+                st.success("อัปเดตเรียบร้อย!")
+                st.rerun()
+
+# --- 8. ตารางผลลัพธ์ ---
+st.divider()
+view = df.copy()
+if q:
+    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
+    view = view[mask]
+
+st.dataframe(view, use_container_width=True, hide_index=True)
