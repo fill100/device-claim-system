@@ -9,18 +9,16 @@ def show_asset_system(conn):
         with open("Wesgan.py", encoding="utf-8") as f:
             code = f.read()
             exec(code)
-    except:
-        err_type, err_value, traceback = sys.exc_info()
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err_value}")
+    except Exception as err:
+        st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err}")
 
 def show_transfer_system(conn):
     try:
         with open("Transfer.py", encoding="utf-8") as f:
             code = f.read()
             exec(code)
-    except:
-        err_type, err_value, traceback = sys.exc_info()
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err_value}")
+    except Exception as err:
+        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err}")
 
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
