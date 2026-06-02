@@ -104,19 +104,20 @@ def handle_export_all():
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # แก้ไขปัญหา KeyError: ดึงหน้าหลักแรกสุดของโปรเจกต์มาใส่ให้อัตโนมัติ
+    # แก้ไขปัญหา KeyError และจัดย่อหน้าบล็อก try-except ให้ถูกต้อง
     try:
         pages_dict = st.source_util.get_pages("")
         main_page_path = next(iter(pages_dict.values()))["script_path"]
         st.page_link(main_page_path, label="Device Claim", icon="📑")
     except Exception:
-
+        # หากดึงข้อมูลระบบไม่ได้ ให้ถอยกลับมาใช้ Path ปกติ (ย่อหน้าตรงนี้ต้องเยื้องเข้ามา 8 ช่อง)
+        st.page_link("app.py", label="Device Claim", icon="📑")
         
+    # ลิงก์หน้าเพจอื่น ๆ จัดย่อหน้าให้ตรงกับแนว try/except หลัก (เยื้องเข้าจาก left สุด 4 ช่อง)
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
-    # ... โค้ดส่วนอื่นๆ ใน Sidebar เหมือนเดิม ...
     
     with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
         new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
@@ -124,7 +125,6 @@ with st.sidebar:
             if new_device and new_device not in st.session_state.available_sheets:
                 try:
                     new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    # แก้ไข: เปลี่ยนจาก conn.create เป็น conn.update เพื่อสร้าง Sheet ใหม่ใน Google Sheets
                     conn.update(worksheet=new_device, data=new_df)
                     st.session_state.available_sheets.append(new_device)
                     st.success(f"สร้างหน้า {new_device} สำเร็จ")
