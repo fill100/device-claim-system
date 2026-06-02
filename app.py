@@ -12,13 +12,21 @@ def show_asset_system(conn):
     except Exception as err:
         st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err}")
 
+# ที่ด้านบนสุดของไฟล์ app.py
 def show_transfer_system(conn):
-    try:
-        with open("Transfer.py", encoding="utf-8") as f:
-            code = f.read()
-            exec(code)
-    except Exception as err:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err}")
+    # อ่านไฟล์ Transfer.py แล้วรันโค้ดข้างใน
+    with open("Transfer.py", encoding="utf-8") as f:
+        code = f.read()
+        # แปลงข้อความในไฟล์ให้เป็น dictionary ของตัวแปรและฟังก์ชัน
+        namespace = {}
+        exec(code, namespace)
+        # เรียกใช้ฟังก์ชันที่ประกาศไว้ในไฟล์นั้น
+        namespace['run_transfer_page'](conn)
+
+# ในส่วนการแสดงผล (ใช้เรียกแบบนี้)
+elif st.session_state.current_page == "Transfer":
+    show_transfer_system(conn)
+    st.stop()
 
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
