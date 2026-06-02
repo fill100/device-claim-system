@@ -160,14 +160,12 @@ if st.session_state.current_page == "Asset System":
         with open("pages/Wesgan.py", encoding="utf-8") as f:
             code = f.read()
             code = code.replace("st.set_page_config", "# st.set_page_config")
-            code = code.replace("st.page_link", "# st.page_link")
             exec(code)
     except FileNotFoundError:
         try:
             with open("Wesgan.py", encoding="utf-8") as f:
                 code = f.read()
                 code = code.replace("st.set_page_config", "# st.set_page_config")
-                code = code.replace("st.page_link", "# st.page_link")
                 exec(code)
         except FileNotFoundError:
             st.error("⚠️ ไม่พบไฟล์ Wesgan.py ในระบบ")
@@ -179,14 +177,12 @@ elif st.session_state.current_page == "Transfer":
         with open("pages/Transfer.py", encoding="utf-8") as f:
             code = f.read()
             code = code.replace("st.set_page_config", "# st.set_page_config")
-            code = code.replace("st.page_link", "# st.page_link")
             exec(code)
     except FileNotFoundError:
         try:
             with open("Transfer.py", encoding="utf-8") as f:
                 code = f.read()
                 code = code.replace("st.set_page_config", "# st.set_page_config")
-                code = code.replace("st.page_link", "# st.page_link")
                 exec(code)
         except FileNotFoundError:
             st.error("⚠️ ไม่พบไฟล์ Transfer.py ในระบบ")
