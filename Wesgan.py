@@ -1,22 +1,20 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# แปลงโค้ดทั้งหมดให้เป็นฟังก์ชัน เพื่อรองรับการเรียกใช้งานร่วมกับ app.py ตัวใหม่
+# ฟังก์ชันหลักสำหรับการเรียกใช้งานผ่าน app.py
 def show_asset_system(conn):
-    st.markdown("### ระบบจัดการทรัพย์สิน (Asset System)")
+    st.title("🛡️ Asset Management")
+    st.subheader("ระบบจัดการทรัพย์สิน (Asset System)")
 
     # --- 1. กำหนดโครงสร้างข้อมูล ---
     ASSET_COLUMNS = ["Serial Number (เลขซีเรียล)", "Model Name (ชื่อรุ่น)", "Location (สถานที่)", "วันที่ซื้อ"]
 
     # --- 2. ดึงข้อมูลจาก Google Sheets ---
     try:
-        # บังคับดึงข้อมูลจาก Worksheet "Asset Management"
         df = conn.read(worksheet="Asset Management", ttl="0")
         if df is not None and not df.empty:
             df.columns = df.columns.str.strip()
-            # ตรวจสอบคอลัมน์ให้ครบตามโครงสร้าง
             for col in ASSET_COLUMNS:
                 if col not in df.columns: df[col] = ""
             df = df[ASSET_COLUMNS]
@@ -35,21 +33,18 @@ def show_asset_system(conn):
         st.session_state.edit_data = None
         st.session_state.row_index = None
 
-    # --- 4. ตัวกรองข้อมูลบนหน้าเว็บ (Model Filter) ---
-    st.subheader("🎯 ตัวกรอง Model")
-    # ป้องกันแอปพังกรณีฐานข้อมูลยังว่างเปล่า
+    # --- 4. ตัวกรองข้อมูล (ย้ายมาไว้บนพื้นที่ทำงานหลัก ไม่ซ้อนใน Sidebar) ---
+    st.markdown("#### 🎯 ตัวกรองข้อมูล")
     existing_models = sorted(df["Model Name (ชื่อรุ่น)"].dropna().unique().tolist()) if not df.empty else []
     all_models = ["ทั้งหมด"] + existing_models
     filter_model = st.selectbox("เลือกดูเฉพาะรุ่น:", all_models)
 
-    # กรองข้อมูลเพื่อเอาไปแสดงผลบนตารางย่อย
+    # กรองข้อมูล
     view_df = df.copy()
     if filter_model != "ทั้งหมด":
         view_df = view_df[view_df["Model Name (ชื่อรุ่น)"] == filter_model]
 
-    # --- 5. UI หลัก (Form สำหรับเพิ่ม/แก้ไขข้อมูลหลัก) ---
-    st.title("🛡️ Asset Management")
-
+    # --- 5. ฟอร์มสำหรับเพิ่ม/แก้ไขข้อมูลทรัพย์สิน ---
     is_editing = st.session_state.edit_data is not None
     expander_label = "📝 แก้ไขข้อมูลทรัพย์สิน" if is_editing else "➕ ลงทะเบียนทรัพย์สินใหม่"
 
@@ -110,7 +105,7 @@ def show_asset_system(conn):
                 else:
                     st.error("กรุณาระบุ Serial Number")
 
-    # --- 6. ส่วนแสดงผลตารางและปุ่มดาวน์โหลดรายงาน ---
+    # --- 6. ส่วนแสดงผลตารางและดาวน์โหลดข้อมูล ---
     st.divider()
     c1, c2 = st.columns([3, 1])
 
@@ -133,7 +128,7 @@ def show_asset_system(conn):
 
     st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ (คลิกที่ช่องสถานที่เพื่อแก้ไขได้ทันที)")
 
-    # กำหนดคีย์เพื่อให้ทำงานร่วมกับระบบสลับหน้าได้โดยข้อมูลไม่หลุดออก
+    # ตารางแบบแก้ไขสถานที่ได้สดๆ
     edited_view_df = st.data_editor(
         view_df,
         use_container_width=True,
@@ -142,23 +137,20 @@ def show_asset_system(conn):
             "Serial Number (เลขซีเรียล)": st.column_config.TextColumn(disabled=True),
             "Model Name (ชื่อรุ่น)": st.column_config.TextColumn(disabled=True),
             "วันที่ซื้อ": st.column_config.TextColumn(disabled=True),
-            "Location (สถานที่)": st.column_config.TextColumn(disabled=False) # อนุญาตให้ดับเบิ้ลคลิกแก้ไขสถานที่ได้เลย
+            "Location (สถานที่)": st.column_config.TextColumn(disabled=False)
         },
         key="bulk_edit_location_asset"
     )
 
-    # ปุ่มบันทึกการแก้ไขสถานที่ลงฐานข้อมูลหลักแบบปลอดภัย (Map สเตทด้วย Serial Number)
     if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง"):
         try:
-            # ใช้กลไก Map ข้อมูลกลับด้วย Serial Number ป้องกันบั๊กสลับแถวเวลาใช้ตัวกรองข้อมูล
             for idx, row in edited_view_df.iterrows():
                 sn_key = row["Serial Number (เลขซีเรียล)"]
                 new_location = row["Location (สถานที่)"]
-                # ทำการอัปเดตตำแหน่งลงตารางหลักจริงของ Google Sheets
                 df.loc[df["Serial Number (เลขซีเรียล)"] == sn_key, "Location (สถานที่)"] = new_location
             
             conn.update(worksheet="Asset Management", data=df.astype(str))
-            st.success("🎉 บันทึกการเปลี่ยนสถานที่ลงระบบเรียบร้อยแล้ว!")
+            st.success("🎉 บันทึกการเปลี่ยนสถานที่สำเร็จ!")
             st.rerun()
         except Exception as e:
-            st.error(f"ไม่สามารถบันทึกข้อมูลได้เนื่องจาก: {e}")
+            st.error(f"ไม่สามารถบันทึกข้อมูลได้: {e}")
