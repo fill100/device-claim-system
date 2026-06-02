@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- ปรับปรุงสีตัวหนังสือและหน้าตา Sidebar เมนูใหม่ ---
+# --- ปรับปรุงหน้าตา Sidebar และปุ่มควบคุมเมนู ---
 st.markdown("""
     <style>
     /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
@@ -14,28 +14,14 @@ st.markdown("""
         color: #ffffff; 
     }
     
-    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit เพื่อเลี่ยงบั๊ก */
+    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit ทั้งหมด */
     [data-testid="stSidebarNav"] {display: none;}
     [data-testid="stSidebarNavItems"] {display: none;}
     
-    /* สไตล์สำหรับลิงก์เมนูนำทางแบบกำหนดเอง (Custom Sidebar Menu) */
-    .custom-sidebar-link {
-        display: block;
-        padding: 10px 15px;
-        color: #ffffff !important;
-        text-decoration: none !important;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-size: 16px;
-        transition: background-color 0.2s;
-    }
-    .custom-sidebar-link:hover {
-        background-color: rgba(255,255,255,0.1);
-    }
-    .sidebar-active {
-        background-color: rgba(255,255,255,0.2);
-        font-weight: bold;
-        border-left: 4px solid #007BFF;
+    /* สไตล์สำหรับปุ่มเมนูนำทางใน Sidebar */
+    .stSidebar [data-testid="stForm"] {
+        border: none;
+        padding: 0;
     }
     
     /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม */
@@ -68,6 +54,10 @@ st.markdown("""
     }
     </style>
     """, unsafe_allow_html=True)
+
+# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (Routing System) ---
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Device Claim"
 
 # --- 1. เชื่อมต่อฐานข้อมูล ---
 try:
@@ -120,14 +110,22 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar (ถอน st.page_link ที่ทำระบบล่มออกเรียบร้อย 100%) ---
+# --- 3. Sidebar (เปลี่ยนมาใช้ระบบกดปุ่มนำทางแบบแท้จริง ลิงก์ไม่หลุดแน่นอน) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # 🛠️ ใช้เมนูนำทางแบบ Custom HTML Link แทนการพึ่งพาระบบหน้าของตระกูลสตรีมลิต ป้องกัน Error บน Cloud ถาวร
-    st.markdown('<a href="/" target="_self" class="custom-sidebar-link sidebar-active">📑 Device Claim</a>', unsafe_allow_html=True)
-    st.markdown('<a href="/Wesgan" target="_self" class="custom-sidebar-link">🛡️ Asset System</a>', unsafe_allow_html=True)
-    st.markdown('<a href="/Transfer" target="_self" class="custom-sidebar-link">✈️ โอนย้ายของ</a>', unsafe_allow_html=True)
+    # เมนูปุ่มกดที่ตรวจจับหน้าปัจจุบันอย่างแม่นยำ
+    if st.button("📑 Device Claim", use_container_width=True, type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
+        st.session_state.current_page = "Device Claim"
+        st.rerun()
+        
+    if st.button("🛡️ Asset System", use_container_width=True, type="primary" if st.session_state.current_page == "Asset System" else "secondary"):
+        st.session_state.current_page = "Asset System"
+        st.rerun()
+        
+    if st.button("✈️ โอนย้ายของ", use_container_width=True, type="primary" if st.session_state.current_page == "Transfer" else "secondary"):
+        st.session_state.current_page = "Transfer"
+        st.rerun()
     
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
@@ -160,240 +158,266 @@ with st.sidebar:
         if full_report is not None:
             st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
 
-# --- 4. หน้าหลัก: เลือก Worksheet และ ค้นหา ---
-st.title("📑 Claim Management System")
 
-col_ws, col_search = st.columns([1, 2])
-with col_ws:
-    selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
+# --- 4. ตรวจจับการเรนเดอร์หน้าเว็บตามเมนูที่เลือก ---
 
-# ดึงข้อมูลจาก Google Sheets
-has_trackmo_col = False
-try:
-    df = conn.read(worksheet=selected_sheet, ttl="0")
-    if df is not None and not df.empty:
-        df.columns = df.columns.str.strip()
-        if "แก้ในTrackMo" in df.columns: 
-            df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
-            has_trackmo_col = True
-        df = df.astype(str)
-        for col in EXPECTED_COLUMNS:
-            if col not in df.columns: df[col] = ""
-        df = df[EXPECTED_COLUMNS]
-    else:
+# 🛑 หน้าที่ 1: ASSET SYSTEM
+if st.session_state.current_page == "Asset System":
+    st.title("🛡️ Asset System")
+    try:
+        # เรียกใช้งานโค้ดภายในไฟล์ Wesgan.py
+        with open("Wesgan.py", encoding="utf-8") as f:
+            exec(f.read())
+    except FileNotFoundError:
+        st.error("⚠️ ไม่พบไฟล์ Wesgan.py กรุณาตรวจสอบว่าชื่อไฟล์ถูกต้องและอยู่บนโฟลเดอร์หลัก")
+    st.stop()
+
+# 🛑 หน้าที่ 2: โอนย้ายของ
+elif st.session_state.current_page == "Transfer":
+    st.title("✈️ โอนย้ายของ")
+    try:
+        # เรียกใช้งานโค้ดภายในไฟล์ Transfer.py
+        with open("Transfer.py", encoding="utf-8") as f:
+            exec(f.read())
+    except FileNotFoundError:
+        st.error("⚠️ ไม่พบไฟล์ Transfer.py กรุณาตรวจสอบว่าชื่อไฟล์ถูกต้องและอยู่บนโฟลเดอร์หลัก")
+    st.stop()
+
+# 🛑 หน้าที่ 3: DEVICE CLAIM (หน้าหลักดั้งเดิม)
+else:
+    st.title("📑 Claim Management System")
+
+    col_ws, col_search = st.columns([1, 2])
+    with col_ws:
+        selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
+
+    # ดึงข้อมูลจาก Google Sheets
+    has_trackmo_col = False
+    try:
+        df = conn.read(worksheet=selected_sheet, ttl="0")
+        if df is not None and not df.empty:
+            df.columns = df.columns.str.strip()
+            if "แก้ในTrackMo" in df.columns: 
+                df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
+                has_trackmo_col = True
+            df = df.astype(str)
+            for col in EXPECTED_COLUMNS:
+                if col not in df.columns: df[col] = ""
+            df = df[EXPECTED_COLUMNS]
+        else:
+            df = pd.DataFrame(columns=EXPECTED_COLUMNS)
+    except Exception:
         df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-except Exception:
-    df = pd.DataFrame(columns=EXPECTED_COLUMNS)
 
-with col_search:
-    q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
+    with col_search:
+        q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
 
-# --- 5. Dashboard Metrics ---
-status_col = df["สถานะ"].str.strip().str.lower()
-inprogress = len(df[status_col == "inprogress"])
-done = len(df[status_col == "done"])
+    # --- 5. Dashboard Metrics ---
+    status_col = df["สถานะ"].str.strip().str.lower()
+    inprogress = len(df[status_col == "inprogress"])
+    done = len(df[status_col == "done"])
 
-st.markdown(f"""
-    <div class="metric-container">
-        <div class="metric-card" style="background-color: #D1E9FF; border-color: #007BFF;">
-            <span class="metric-label">ทั้งหมดในหน้านี้</span>
-            <span class="metric-value">{len(df)}</span>
+    st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-card" style="background-color: #D1E9FF; border-color: #007BFF;">
+                <span class="metric-label">ทั้งหมดในหน้านี้</span>
+                <span class="metric-value">{len(df)}</span>
+            </div>
+            <div class="metric-card" style="background-color: #FFF9C4; border-color: #FBC02D;">
+                <span class="metric-label">In Progress (กำลังซ่อม)</span>
+                <span class="metric-value">{inprogress}</span>
+            </div>
+            <div class="metric-card" style="background-color: #C8E6C9; border-color: #388E3C;">
+                <span class="metric-label">Done (เสร็จสิ้น)</span>
+                <span class="metric-value">{done}</span>
+            </div>
         </div>
-        <div class="metric-card" style="background-color: #FFF9C4; border-color: #FBC02D;">
-            <span class="metric-label">In Progress (กำลังซ่อม)</span>
-            <span class="metric-value">{inprogress}</span>
-        </div>
-        <div class="metric-card" style="background-color: #C8E6C9; border-color: #388E3C;">
-            <span class="metric-label">Done (เสร็จสิ้น)</span>
-            <span class="metric-value">{done}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูลใหม่ ---
-with st.expander("➕ เพิ่มรายการเคลมใหม่ (Add New Claim)", expanded=False):
-    with st.form("add_new_claim_form"):
-        st.selectbox("ประเภทอุปกรณ์", st.session_state.available_sheets, index=st.session_state.available_sheets.index(selected_sheet) if selected_sheet in st.session_state.available_sheets else 0, disabled=True)
+    # --- 6. ส่วนฟอร์มเพิ่มข้อมูลใหม่ ---
+    with st.expander("➕ เพิ่มรายการเคลมใหม่ (Add New Claim)", expanded=False):
+        with st.form("add_new_claim_form"):
+            st.selectbox("ประเภทอุปกรณ์", st.session_state.available_sheets, index=st.session_state.available_sheets.index(selected_sheet) if selected_sheet in st.session_state.available_sheets else 0, disabled=True)
+            
+            branch = st.selectbox("สาขา", BRANCH_LIST)
+            counter = st.text_input("Counter")
+            serial_faulty = st.text_input("Serial เครื่องที่เสีย (บังคับ)")
+            serial_center = st.text_input("Serial เครื่องที่ส่งให้ศูนย์")
+            status = st.selectbox("สถานะ", ["inprogress", "Done"])
+            
+            submit_new_claim = st.form_submit_button("💾 บันทึกรายการเคลมนี้", type="primary")
+            
+            if submit_new_claim:
+                if serial_faulty.strip() != "":
+                    now_thailand = datetime.now() + timedelta(hours=7)
+                    time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+                    
+                    new_row = {
+                        "วันที่รับแจ้ง": time_str,
+                        "วันทีนำไปติดตั้งใหม่": "",
+                        "สาขา": branch,
+                        "counter": counter,
+                        "Serial เครื่องที่เสีย": serial_faulty,
+                        "Serial เครื่องที่ส่งให้ศูนย์": "" if serial_center.strip().lower() == "none" else serial_center,
+                        "สถานะ": status
+                    }
+                    
+                    new_df_row = pd.DataFrame([new_row])
+                    df = pd.concat([df, new_df_row], ignore_index=True).astype(str)
+                    
+                    save_df = df.copy()
+                    if has_trackmo_col and "สถานะ" in save_df.columns:
+                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                    
+                    try:
+                        conn.update(worksheet=selected_sheet, data=save_df)
+                        st.success("🎉 บันทึกรายการเคลมใหม่ลงระบบสำเร็จ!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
+                else:
+                    st.warning("⚠️ โปรดระบุ 'Serial เครื่องที่เสีย' ก่อนกดบันทึก")
+
+    # --- ส่วนเพิ่มข้อมูลแบบพร้อมกันหลายรายการ (Bulk Insert) ---
+    with st.expander("📝 เพิ่มรายการแจ้งซ่อมแบบหลายรายการ (Bulk Insert จาก Excel)"):
+        if "editor_version" not in st.session_state:
+            st.session_state.editor_version = 0
+
+        default_buffer = pd.DataFrame([{
+            "สาขา": "One Bangkok", "counter": "", "Serial เครื่องที่เสีย (บังคับ)": "", "Serial เครื่องที่ส่งให้ศูนย์": "", "สถานะ": "inprogress"
+        }])
+
+        st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
         
-        branch = st.selectbox("สาขา", BRANCH_LIST)
-        counter = st.text_input("Counter")
-        serial_faulty = st.text_input("Serial เครื่องที่เสีย (บังคับ)")
-        serial_center = st.text_input("Serial เครื่องที่ส่งให้ศูนย์")
-        status = st.selectbox("สถานะ", ["inprogress", "Done"])
-        
-        submit_new_claim = st.form_submit_button("💾 บันทึกรายการเคลมนี้", type="primary")
-        
-        if submit_new_claim:
-            if serial_faulty.strip() != "":
+        edited_input = st.data_editor(
+            default_buffer,
+            num_rows="dynamic",
+            column_config={
+                "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
+                "counter": st.column_config.TextColumn("Counter"),
+                "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
+                "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
+                "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
+            },
+            use_container_width=True,
+            key=f"bulk_editor_{st.session_state.editor_version}"
+        )
+
+        if st.button("💾 บันทึกทุกรายการ Bulk ลงฐานข้อมูล"):
+            valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].fillna("").str.strip() != ""].copy()
+            if not valid_rows.empty:
                 now_thailand = datetime.now() + timedelta(hours=7)
                 time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
                 
-                new_row = {
-                    "วันที่รับแจ้ง": time_str,
-                    "วันทีนำไปติดตั้งใหม่": "",
-                    "สาขา": branch,
-                    "counter": counter,
-                    "Serial เครื่องที่เสีย": serial_faulty,
-                    "Serial เครื่องที่ส่งให้ศูนย์": "" if serial_center.strip().lower() == "none" else serial_center,
-                    "สถานะ": status
-                }
+                new_rows_list = []
+                for _, row in valid_rows.iterrows():
+                    sn_center = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).strip().lower() == "none" else row["Serial เครื่องที่ส่งให้ศูนย์"]
+                    new_rows_list.append({
+                        "วันที่รับแจ้ง": time_str,
+                        "วันทีนำไปติดตั้งใหม่": "",
+                        "สาขา": row["สาขา"],
+                        "counter": row["counter"],
+                        "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
+                        "Serial เครื่องที่ส่งให้ศูนย์": sn_center,
+                        "สถานะ": row["สถานะ"]
+                    })
                 
-                new_df_row = pd.DataFrame([new_row])
-                df = pd.concat([df, new_df_row], ignore_index=True).astype(str)
+                new_df_to_add = pd.DataFrame(new_rows_list)
+                df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
                 
                 save_df = df.copy()
                 if has_trackmo_col and "สถานะ" in save_df.columns:
                     save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                
+
                 try:
                     conn.update(worksheet=selected_sheet, data=save_df)
-                    st.success("🎉 บันทึกรายการเคลมใหม่ลงระบบสำเร็จ!")
+                    st.success(f"🎉 บันทึกข้อมูลแบบตารางเรียบร้อยแล้ว {len(new_rows_list)} รายการ!")
+                    st.session_state.editor_version += 1
                     st.rerun()
                 except Exception as e:
                     st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
-            else:
-                st.warning("⚠️ โปรดระบุ 'Serial เครื่องที่เสีย' ก่อนกดบันทึก")
 
-# --- ส่วนเพิ่มข้อมูลแบบพร้อมกันหลายรายการ (Bulk Insert) ---
-with st.expander("📝 เพิ่มรายการแจ้งซ่อมแบบหลายรายการ (Bulk Insert จาก Excel)"):
-    if "editor_version" not in st.session_state:
-        st.session_state.editor_version = 0
-
-    default_buffer = pd.DataFrame([{
-        "สาขา": "One Bangkok", "counter": "", "Serial เครื่องที่เสีย (บังคับ)": "", "Serial เครื่องที่ส่งให้ศูนย์": "", "สถานะ": "inprogress"
-    }])
-
-    st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
-    
-    edited_input = st.data_editor(
-        default_buffer,
-        num_rows="dynamic",
-        column_config={
-            "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
-            "counter": st.column_config.TextColumn("Counter"),
-            "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
-            "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
-            "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
-        },
-        use_container_width=True,
-        key=f"bulk_editor_{st.session_state.editor_version}"
-    )
-
-    if st.button("💾 บันทึกทุกรายการ Bulk ลงฐานข้อมูล"):
-        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].fillna("").str.strip() != ""].copy()
-        if not valid_rows.empty:
-            now_thailand = datetime.now() + timedelta(hours=7)
-            time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+    # --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
+    if not df.empty:
+        with st.expander("📝 แก้ไข หรือ ลบรายการ"):
+            sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
+            sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
+            idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
+            row = df.loc[idx]
             
-            new_rows_list = []
-            for _, row in valid_rows.iterrows():
-                sn_center = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).strip().lower() == "none" else row["Serial เครื่องที่ส่งให้ศูนย์"]
-                new_rows_list.append({
-                    "วันที่รับแจ้ง": time_str,
-                    "วันทีนำไปติดตั้งใหม่": "",
-                    "สาขา": row["สาขา"],
-                    "counter": row["counter"],
-                    "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
-                    "Serial เครื่องที่ส่งให้ศูนย์": sn_center,
-                    "สถานะ": row["สถานะ"]
-                })
-            
-            new_df_to_add = pd.DataFrame(new_rows_list)
-            df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
-            
-            save_df = df.copy()
-            if has_trackmo_col and "สถานะ" in save_df.columns:
-                save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+            val_d_rec = "" if str(row["วันที่รับแจ้ง"]).lower() == "nan" else str(row["วันที่รับแจ้ง"])
+            val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
+            val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
 
             try:
-                conn.update(worksheet=selected_sheet, data=save_df)
-                st.success(f"🎉 บันทึกข้อมูลแบบตารางเรียบร้อยแล้ว {len(new_rows_list)} รายการ!")
-                st.session_state.editor_version += 1
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
-
-# --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
-if not df.empty:
-    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-        row = df.loc[idx]
-        
-        val_d_rec = "" if str(row["วันที่รับแจ้ง"]).lower() == "nan" else str(row["วันที่รับแจ้ง"])
-        val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
-        val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
-
-        try:
-            date_str = str(row["วันทีนำไปติดตั้งใหม่"]).strip()
-            if date_str and date_str.lower() != "nan" and date_str != "":
-                curr_d_ins = datetime.strptime(date_str, "%Y-%m-%d").date()
-            else:
+                date_str = str(row["วันทีนำไปติดตั้งใหม่"]).strip()
+                if date_str and date_str.lower() != "nan" and date_str != "":
+                    curr_d_ins = datetime.strptime(date_str, "%Y-%m-%d").date()
+                else:
+                    curr_d_ins = date.today()
+            except Exception:
                 curr_d_ins = date.today()
-        except Exception:
-            curr_d_ins = date.today()
 
-        with st.form("edit_full_form"):
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                new_d_rec = st.text_input("วันที่รับแจ้ง", value=val_d_rec)
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_c = st.text_input("Counter", value=val_counter)
-            with e3:
-                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=val_sn_ctr)
-            
-            submit_edit = st.form_submit_button("💾 บันทึกการแก้ไข")
-            
-            if submit_edit:
-                df = df.astype(object)
-                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                df.at[idx, "สาขา"] = new_b
-                df.at[idx, "counter"] = new_c
-                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "สถานะ"] = new_s
+            with st.form("edit_full_form"):
+                e1, e2, e3 = st.columns(3)
+                with e1:
+                    new_d_rec = st.text_input("วันที่รับแจ้ง", value=val_d_rec)
+                    new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
+                    new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
+                with e2:
+                    new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
+                    new_c = st.text_input("Counter", value=val_counter)
+                with e3:
+                    new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
+                    new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=val_sn_ctr)
                 
-                save_df = df.copy()
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                submit_edit = st.form_submit_button("💾 บันทึกการแก้ไข")
                 
-                try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                    st.success("อัปเดตเรียบร้อย!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
-        
-        st.markdown("---")
-        st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
-        confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
-        
-        if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
-            if confirm_row_delete:
-                df = df.drop(idx)
-                save_df = df.copy()
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                    st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
-            else:
-                st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
+                if submit_edit:
+                    df = df.astype(object)
+                    df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
+                    df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
+                    df.at[idx, "สาขา"] = new_b
+                    df.at[idx, "counter"] = new_c
+                    df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
+                    df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
+                    df.at[idx, "สถานะ"] = new_s
+                    
+                    save_df = df.copy()
+                    if has_trackmo_col and "สถานะ" in save_df.columns:
+                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                    
+                    try:
+                        conn.update(worksheet=selected_sheet, data=save_df.astype(str))
+                        st.success("อัปเดตเรียบร้อย!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
+            
+            st.markdown("---")
+            st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
+            confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
+            
+            if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
+                if confirm_row_delete:
+                    df = df.drop(idx)
+                    save_df = df.copy()
+                    if has_trackmo_col and "สถานะ" in save_df.columns:
+                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                    try:
+                        conn.update(worksheet=selected_sheet, data=save_df.astype(str))
+                        st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
+                else:
+                    st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
 
-# --- 8. ตารางผลลัพธ์ ---
-st.divider()
-view = df.copy()
-if q:
-    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-    view = view[mask]
+    # --- 8. ตารางผลลัพธ์ ---
+    st.divider()
+    view = df.copy()
+    if q:
+        mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
+        view = view[mask]
 
-st.dataframe(view, use_container_width=True, hide_index=True)
+    st.dataframe(view, use_container_width=True, hide_index=True)
