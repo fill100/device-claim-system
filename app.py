@@ -179,18 +179,12 @@ elif st.session_state.current_page == "Transfer":
     st.stop()
 
 else:
-    # หน้าหลัก Device Claim
-    st.title("📑 Claim Management System")
-    # ... โค้ดส่วนที่เหลือของคุณ ...
-
-# 🛑 แสดงผลหน้า: DEVICE CLAIM (หน้าหลักดั้งเดิม)
-else:
+    # --- หน้าหลัก Device Claim (เอาส่วนที่เคยต่อท้าย else: ออกให้หมด แล้ววางที่นี่) ---
     st.title("📑 Claim Management System")
 
     col_ws, col_search = st.columns([1, 2])
     with col_ws:
         selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
-
     # ดึงข้อมูลจาก Google Sheets
     has_trackmo_col = False
     try:
