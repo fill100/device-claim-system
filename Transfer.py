@@ -1,23 +1,13 @@
 import streamlit as st
 # โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
-st.markdown("""
-    <style>
-    [data-testid="stSidebarNav"] {display: none;} /* ซ่อนเมนูเดิมที่ชื่อ app/Wesgan */
-    [data-testid="stSidebarNavItems"] {display: none;}
-    </style>
-    """, unsafe_allow_html=True)
+import streamlit as st
+st.markdown("### ระบบจัดการทรัพย์สิน (Asset System)")
+
+# ... โค้ดดึงข้อมูลตาราง/ฟอร์มเดิมของคุณ ...
 import pandas as pd
 from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
-
-# --- ตั้งค่าหน้ากระดาษ ---
-st.set_page_config(page_title="Asset Transfer Form", layout="wide")
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
 
 # --- 1. ฟังก์ชันสร้าง PDF ---
 def create_transfer_pdf(data):
