@@ -1,250 +1,99 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# --- ตั้งค่าหน้ากระดาษ ---
-st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
+# ตั้งค่าหน้าเพจย่อย (จะแสดงผลแบบเต็มหน้าจอ)
+st.set_page_config(page_title="JVFS Device Claim System", layout="wide")
 
-# --- ปรับปรุงสีตัวหนังสือให้ชัดเจนที่สุด (High Contrast) ---
-st.markdown("""
-    <style>
-    /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
-    html, body, [class*="css"], .stMarkdown, p, span, label {
-        color: #ffffff !important; /* สีขาวสำหรับข้อความทั่วไปบนพื้นหลังมืด */
-    }
-    
-    /* ซ่อนเมนูเดิม */
-    [data-testid="stSidebarNav"] {display: none;}
-    [data-testid="stSidebarNavItems"] {display: none;}
-    
-    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม (เพื่อให้อ่านออกบนพื้นสีสว่าง) */
-    .metric-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    .metric-card {
-        flex: 1;
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        border: 2px solid #444444;
-    }
-    .metric-value {
-        font-size: 36px;
-        font-weight: 900; /* หนาพิเศษ */
-        display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำ */
-    }
-    .metric-label {
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 5px;
-        display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำ */
-    }
-    </style>
-    """, unsafe_allow_html=True)
+st.title("📑 JVFS Device Claim System")
+st.caption("ระบบบันทึก ตรวจสอบ และติดตามสถานะการเคลมอุปกรณ์ไอทีประจำศูนย์บริการ")
 
-# --- 1. เชื่อมต่อฐานข้อมูล ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-except Exception as e:
-    st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
-    st.stop()
+# ฟังก์ชันเชื่อมต่อฐานข้อมูล Google Sheets
+def get_sheets_connection():
+    if "connections" not in st.secrets:
+        st.error("❌ ไม่พบโครงสร้าง Secrets กรุณาตั้งค่า Spreadsheet URL ก่อนครับ")
+        st.stop()
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        return conn
+    except Exception:
+        st.error("❌ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้")
+        st.stop()
 
-# --- 2. ข้อมูลตั้งต้น (ครบถ้วนตามเดิม) ---
-INITIAL_SHEETS = [
-    "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
+# ข้อมูลดิบพื้นฐาน
+branches_list = [
+    "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", 
+    "กรุงเทพมหานคร 5 (สจก.9)", "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)",
+    "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", "สมุทรสาคร", "สมุทรปราการ", "นครปฐม",
+    "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", "สระบุรี", "สุพรรณบุรี",
+    "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", "จันทบุรี",
+    "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร",
+    "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี",
+    "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง",
+    "ระนอง", "สงขลา", "สุราษฎร์ธานี", "กระบี่"
+]
+
+device_types = [
+    "Signature pad", "Passport Scanner", "Iris Scanner", "Printer Thermal (ปริ้นคิว)",
     "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
     "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
 ]
 
-if 'available_sheets' not in st.session_state:
-    st.session_state.available_sheets = INITIAL_SHEETS.copy()
+# ดึงข้อมูลจาก Sheets
+conn = get_sheets_connection()
+df = conn.read(ttl="0")
 
-EXPECTED_COLUMNS = [
-    "วันที่รับแจ้ง", "วันทีนำไปติดตั้งใหม่", "สาขา", 
-    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
-]
-
-BRANCH_LIST = [
-    "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
-    "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)", "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", 
-    "สมุทรสาคร", "สมุทรปราการ", "นครปฐม", "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", 
-    "สระบุรี", "สุพรรณบุรี", "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", 
-    "จันทบุรี", "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร", 
-    "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี", 
-    "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง", "ระนอง", 
-    "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
-    "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
-]
-
-def convert_df(df_to_convert):
-    return df_to_convert.to_csv(index=False).encode('utf-8-sig')
-
-def handle_export_all():
-    all_data = []
-    for sheet in st.session_state.available_sheets:
-        try:
-            temp_df = conn.read(worksheet=sheet, ttl="0")
-            if temp_df is not None and not temp_df.empty:
-                temp_df["ประเภทอุปกรณ์"] = sheet
-                all_data.append(temp_df)
-        except: continue
-    return pd.concat(all_data, ignore_index=True) if all_data else None
-
-# --- 3. Sidebar (คงเดิมทุกอย่าง) ---
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
-    st.divider()
-    st.title("🛠️ ตั้งค่าและรายงาน")
-    
-    with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
-        new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
-        if st.button("➕ สร้างหน้าใหม่"):
-            if new_device and new_device not in st.session_state.available_sheets:
-                try:
-                    new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    conn.create(worksheet=new_device, data=new_df)
-                    st.session_state.available_sheets.append(new_device)
-                    st.rerun()
-                except: st.error("สร้างไม่สำเร็จ")
-
-    with st.expander("⚠️ ลบอุปกรณ์"):
-        target_del = st.selectbox("เลือก Worksheet ที่จะลบ:", st.session_state.available_sheets)
-        confirm_delete = st.checkbox(f"ยืนยันลบ '{target_del}'")
-        if st.button("🗑️ ยืนยันการลบ"):
-            if confirm_delete and len(st.session_state.available_sheets) > 1:
-                st.session_state.available_sheets.remove(target_del)
-                st.rerun()
-
-    st.divider()
-    st.subheader("📊 Export Report")
-    if st.button("📦 Prepare All Devices Report"):
-        full_report = handle_export_all()
-        if full_report is not None:
-            st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
-
-# --- 4. หน้าหลัก: เลือก Worksheet และ ค้นหา ---
-st.title("📑 Claim Management System")
-
-col_ws, col_search = st.columns([1, 2])
-with col_ws:
-    selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
-
-# ดึงข้อมูล
-try:
-    df = conn.read(worksheet=selected_sheet, ttl="0")
-    if df is not None and not df.empty:
-        df.columns = df.columns.str.strip()
-        if "แก้ในTrackMo" in df.columns: df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
-        df = df.astype(str)
-        for col in EXPECTED_COLUMNS:
-            if col not in df.columns: df[col] = ""
-        df = df[EXPECTED_COLUMNS]
-    else:
-        df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-except Exception:
-    df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-
-with col_search:
-    q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
-
-# --- 5. Dashboard Metrics (ปรับสีตัวหนังสือให้ดำเข้ม อ่านออกแน่นอน) ---
-status_col = df["สถานะ"].str.strip().str.lower()
-inprogress = len(df[status_col == "inprogress"])
-done = len(df[status_col == "done"])
-
-st.markdown(f"""
-    <div class="metric-container">
-        <div class="metric-card" style="background-color: #D1E9FF; border-color: #007BFF;">
-            <span class="metric-label">ทั้งหมดในหน้านี้</span>
-            <span class="metric-value">{len(df)}</span>
-        </div>
-        <div class="metric-card" style="background-color: #FFF9C4; border-color: #FBC02D;">
-            <span class="metric-label">In Progress (กำลังซ่อม)</span>
-            <span class="metric-value">{inprogress}</span>
-        </div>
-        <div class="metric-card" style="background-color: #C8E6C9; border-color: #388E3C;">
-            <span class="metric-label">Done (เสร็จสิ้น)</span>
-            <span class="metric-value">{done}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (คงเดิม) ---
-with st.expander("➕ เพิ่มรายการแจ้งซ่อม"):
-    with st.form("add_form", clear_on_submit=True):
-        f1, f2 = st.columns(2)
-        with f1:
-            br = st.selectbox("สาขา", BRANCH_LIST)
-            cnt = st.text_input("Counter")
-            sn_f = st.text_input("Serial เครื่องเสีย (บังคับ)")
-        with f2:
-            stt = st.selectbox("สถานะ", ["inprogress", "Done"])
-            dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
-            sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
+# ฟอร์มบันทึกข้อมูลเคลม
+with st.expander("➕ เพิ่มรายการเคลมใหม่", expanded=False):
+    with st.form("main_form", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            category = st.selectbox("ประเภทอุปกรณ์", device_types)
+            branch = st.selectbox("สาขาที่พบปัญหา", branches_list)
+            asset_no = st.text_input("Asset No.")
+            sn_faulty = st.text_input("S/N เครื่องที่เสีย")
+        with col2:
+            status = st.selectbox("สถานะปัจจุบัน", ["Pending", "inprogress", "Done"])
+            symptom = st.text_area("อาการเสียโดยละเอียด")
+            sn_new = st.text_input("S/N เครื่องใหม่ / ของเปลี่ยนทดแทน")
         
-        if st.form_submit_button("บันทึกข้อมูล"):
-            if sn_f:
-                now_thailand = datetime.now() + timedelta(hours=7)
-                time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
-                new_row = pd.DataFrame([{
-                    "วันที่รับแจ้ง": time_str, "วันทีนำไปติดตั้งใหม่": dt_clm.strftime("%Y-%m-%d") if dt_clm else "",
-                    "สาขา": br, "counter": cnt, "Serial เครื่องที่เสีย": sn_f, "สถานะ": stt,
-                    "Serial เครื่องที่ส่งให้ศูนย์": sn_n
-                }])
-                df = pd.concat([df, new_row], ignore_index=True).astype(str)
-                conn.update(worksheet=selected_sheet, data=df)
-                st.success("บันทึกข้อมูลสำเร็จ!")
-                st.rerun()
+        if st.form_submit_button("💾 บันทึกข้อมูลลง Google Sheets"):
+            new_row = pd.DataFrame([{
+                "วันที่บันทึก": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "ประเภทอุปกรณ์": category,
+                "สาขา": branch,
+                "Asset No.": asset_no,
+                "S/N เครื่องเสีย": sn_faulty,
+                "อาการเสีย": symptom,
+                "สถานะ": status,
+                "S/N เครื่องใหม่": sn_new
+            }])
+            updated_df = pd.concat([df, new_row], ignore_index=True)
+            conn.update(data=updated_df)
+            st.success("✅ อัปเดตข้อมูลเข้าฐานข้อมูลเรียบร้อยแล้ว!")
+            st.rerun()
 
-# --- 7. ส่วนแก้ไข/ลบ (คงเดิม) ---
-if not df.empty:
-    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-        row = df.loc[idx]
-        with st.form("edit_full_form"):
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
-                try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
-                except: curr_d_ins = None
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_c = st.text_input("Counter", value=str(row["counter"]))
-            with e3:
-                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-            if st.form_submit_button("💾 บันทึกการแก้ไข"):
-                df = df.astype(object)
-                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                df.at[idx, "สาขา"] = new_b
-                df.at[idx, "counter"] = new_c
-                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "สถานะ"] = new_s
-                conn.update(worksheet=selected_sheet, data=df.astype(str))
-                st.success("อัปเดตเรียบร้อย!")
-                st.rerun()
-
-# --- 8. ตารางผลลัพธ์ ---
 st.divider()
-view = df.copy()
-if q:
-    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-    view = view[mask]
 
-st.dataframe(view, use_container_width=True, hide_index=True)
+# ระบบกรองและค้นหาข้อมูล
+st.subheader("🔍 ค้นหาและคัดกรองข้อมูล")
+search_col1, search_col2 = st.columns([2, 1])
+with search_col1:
+    search_query = st.text_input("🔎 พิมพ์คำค้นหา...", placeholder="พิมพ์คำเพื่อค้นหาในตาราง...")
+with search_col2:
+    options = ["ทั้งหมด"] + sorted(df["ประเภทอุปกรณ์"].unique().tolist()) if not df.empty else ["ทั้งหมด"]
+    filter_cat = st.selectbox("🏷️ เลือกเฉพาะอุปกรณ์", options)
+
+view_df = df.copy()
+if filter_cat != "ทั้งหมด":
+    view_df = view_df[view_df["ประเภทอุปกรณ์"] == filter_cat]
+if search_query:
+    mask = view_df.astype(str).apply(lambda x: x.str.contains(search_query, case=False, na=False)).any(axis=1)
+    view_df = view_df[mask]
+
+if not view_df.empty:
+    st.write(f"📊 พบผลลัพธ์ข้อมูลทั้งหมด {len(view_df)} รายการ")
+    st.dataframe(view_df, use_container_width=True, hide_index=True)
+else:
+    st.info("💡 ไม่พบข้อมูลตามเงื่อนไข")
