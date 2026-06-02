@@ -1,12 +1,12 @@
 import streamlit as st
-# โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
 st.markdown("""
     <style>
-    [data-testid="stSidebar"] {
-        display: none !important;
-    }
+    /* บังคับซ่อนทุกอย่างที่เกี่ยวกับ Sidebar ในหน้านี้ */
+    section[data-testid="stSidebar"] { display: none !important; }
+    /* ขยายความกว้างเนื้อหาให้เต็มจอเพราะ Sidebar หายไปแล้ว */
+    [data-testid="stAppViewContainer"] { margin-left: 0 !important; }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 import pandas as pd
 from datetime import datetime, timedelta
 from fpdf import FPDF
