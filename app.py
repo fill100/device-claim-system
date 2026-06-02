@@ -14,7 +14,7 @@ st.markdown("""
         color: #ffffff; 
     }
     
-    /* ซ่อนเมนูเดิม */
+    /* ซ่อนเมนูนำทางเริ่มต้นของระบบเพื่อใช้งาน Custom Sidebar */
     [data-testid="stSidebarNav"] {display: none;}
     [data-testid="stSidebarNavItems"] {display: none;}
     
@@ -45,24 +45,6 @@ st.markdown("""
         margin-top: 5px;
         display: block;
         color: #000000 !important; 
-    }
-    
-    /* ตกแต่งปุ่มลิงก์สไตล์ Sidebar */
-    .sidebar-link {
-        display: block;
-        padding: 10px 15px;
-        color: #ffffff !important;
-        text-decoration: none;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-size: 16px;
-    }
-    .sidebar-link:hover {
-        background-color: rgba(255,255,255,0.1);
-    }
-    .sidebar-active {
-        background-color: rgba(255,255,255,0.15);
-        font-weight: bold;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -118,14 +100,14 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar ---
+# --- 3. Sidebar และระบบจัดการลิงก์หน้าเพจย่อย (Multi-page Navigation) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # 🛠️ ปรับโฉมเมนูนำทางใหม่ ลบ st.page_link ยุ่งยากออกทั้งหมด เพื่อไม่ให้เกิด KeyError / PageNotFoundError อีก
-    st.markdown('<a href="/" target="_self" class="sidebar-link sidebar-active">📑 Device Claim</a>', unsafe_allow_html=True)
-    st.markdown('<a href="/Wesgan" target="_self" class="sidebar-link">🛡️ Asset System</a>', unsafe_allow_html=True)
-    st.markdown('<a href="/Transfer" target="_self" class="sidebar-link">✈️ โอนย้ายของ</a>', unsafe_allow_html=True)
+    # 🛠️ ปรับมาใช้ st.page_link ยุคใหม่โดยอ้างอิงไฟล์ให้ตรงระบบคลาวด์ ป้องกันหน้าเว็บหลุด/หาไม่เจอ
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
+    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
@@ -208,8 +190,55 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert) ---
-with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
+# --- 6. ส่วนฟอร์มเพิ่มข้อมูลใหม่ (แก้ไขปัญหา Missing Submit Button และ NameError) ---
+with st.expander("➕ เพิ่มรายการเคลมใหม่ (Add New Claim)", expanded=False):
+    # เปลี่ยนโครงสร้างตรงนี้ให้เป็น st.form ครอบ เพื่อบังคับส่งข้อมูลด้วยปุ่มกด แก้ปัญหา Missing Submit Button 
+    with st.form("add_new_claim_form"):
+        st.selectbox("ประเภทอุปกรณ์", st.session_state.available_sheets, index=st.session_state.available_sheets.index(selected_sheet) if selected_sheet in st.session_state.available_sheets else 0, disabled=True)
+        
+        # 🛠️ แก้ไข NameError: เปลี่ยนตัวแปรจาก branches ไปเป็น BRANCH_LIST ให้ตรงกับที่ประกาศไว้ด้านบนแอป
+        branch = st.selectbox("สาขา", BRANCH_LIST)
+        counter = st.text_input("Counter")
+        serial_faulty = st.text_input("Serial เครื่องที่เสีย (บังคับ)")
+        serial_center = st.text_input("Serial เครื่องที่ส่งให้ศูนย์")
+        status = st.selectbox("สถานะ", ["inprogress", "Done"])
+        
+        # สร้างปุ่มส่งข้อมูลสำหรับ Form โดยเฉพาะ
+        submit_new_claim = st.form_submit_button("💾 บันทึกรายการเคลมนี้", type="primary")
+        
+        if submit_new_claim:
+            if serial_faulty.strip() != "":
+                now_thailand = datetime.now() + timedelta(hours=7)
+                time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+                
+                new_row = {
+                    "วันที่รับแจ้ง": time_str,
+                    "วันทีนำไปติดตั้งใหม่": "",
+                    "สาขา": branch,
+                    "counter": counter,
+                    "Serial เครื่องที่เสีย": serial_faulty,
+                    "Serial เครื่องที่ส่งให้ศูนย์": "" if serial_center.strip().lower() == "none" else serial_center,
+                    "สถานะ": status
+                }
+                
+                new_df_row = pd.DataFrame([new_row])
+                df = pd.concat([df, new_df_row], ignore_index=True).astype(str)
+                
+                save_df = df.copy()
+                if has_trackmo_col and "สถานะ" in save_df.columns:
+                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                
+                try:
+                    conn.update(worksheet=selected_sheet, data=save_df)
+                    st.success("🎉 บันทึกรายการเคลมใหม่ลงระบบสำเร็จ!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
+            else:
+                st.warning("⚠️ โปรดระบุ 'Serial เครื่องที่เสีย' ก่อนกดบันทึก")
+
+# --- ส่วนเพิ่มข้อมูลแบบพร้อมกันหลายรายการ (Bulk Insert) ---
+with st.expander("📝 เพิ่มรายการแจ้งซ่อมแบบหลายรายการ (Bulk Insert จาก Excel)"):
     if "editor_version" not in st.session_state:
         st.session_state.editor_version = 0
 
@@ -233,9 +262,8 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
         key=f"bulk_editor_{st.session_state.editor_version}"
     )
 
-    if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
+    if st.button("💾 บันทึกทุกรายการ Bulk ลงฐานข้อมูล"):
         valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].fillna("").str.strip() != ""].copy()
-        
         if not valid_rows.empty:
             now_thailand = datetime.now() + timedelta(hours=7)
             time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
@@ -243,7 +271,6 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
             new_rows_list = []
             for _, row in valid_rows.iterrows():
                 sn_center = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).strip().lower() == "none" else row["Serial เครื่องที่ส่งให้ศูนย์"]
-                
                 new_rows_list.append({
                     "วันที่รับแจ้ง": time_str,
                     "วันทีนำไปติดตั้งใหม่": "",
@@ -263,13 +290,11 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
 
             try:
                 conn.update(worksheet=selected_sheet, data=save_df)
-                st.success(f"🎉 บันทึกข้อมูลเรียบร้อยแล้วทั้งหมด {len(new_rows_list)} รายการ!")
+                st.success(f"🎉 บันทึกข้อมูลแบบตารางเรียบร้อยแล้ว {len(new_rows_list)} รายการ!")
                 st.session_state.editor_version += 1
                 st.rerun()
             except Exception as e:
                 st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
-        else:
-            st.warning("⚠️ โปรดกรอกข้อมูลในช่อง 'Serial เครื่องที่เสีย' อย่างน้อย 1 รายการก่อนกดบันทึก")
 
 # --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
 if not df.empty:
@@ -292,7 +317,6 @@ if not df.empty:
         except Exception:
             curr_d_ins = date.today()
 
-        # แก้ไขปัญหา Missing Submit Button โดยผูก st.form_submit_button ไว้ในฟอร์มอย่างเคร่งครัด
         with st.form("edit_full_form"):
             e1, e2, e3 = st.columns(3)
             with e1:
