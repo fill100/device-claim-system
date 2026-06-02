@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
@@ -11,14 +11,14 @@ st.markdown("""
     <style>
     /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
     html, body, [class*="css"], .stMarkdown, p, span, label {
-        color: #ffffff; /* ปรับออกจาก !important ระดับ global เพื่อให้คลาสเฉพาะทำงานได้ */
+        color: #ffffff !important; /* สีขาวสำหรับข้อความทั่วไปบนพื้นหลังมืด */
     }
     
     /* ซ่อนเมนูเดิม */
     [data-testid="stSidebarNav"] {display: none;}
     [data-testid="stSidebarNavItems"] {display: none;}
     
-    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม */
+    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม (เพื่อให้อ่านออกบนพื้นสีสว่าง) */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -33,18 +33,18 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         border: 2px solid #444444;
     }
-    .metric-container .metric-card .metric-value {
+    .metric-value {
         font-size: 36px;
-        font-weight: 900; 
+        font-weight: 900; /* หนาพิเศษ */
         display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำเข้มเด็ดขาด */
+        color: #000000 !important; /* บังคับเป็นสีดำ */
     }
-    .metric-container .metric-card .metric-label {
+    .metric-label {
         font-size: 18px;
         font-weight: bold;
         margin-top: 5px;
         display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำเข้มเด็ดขาด */
+        color: #000000 !important; /* บังคับเป็นสีดำ */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -92,9 +92,6 @@ def handle_export_all():
         try:
             temp_df = conn.read(worksheet=sheet, ttl="0")
             if temp_df is not None and not temp_df.empty:
-                temp_df.columns = temp_df.columns.str.strip()
-                if "แก้ในTrackMo" in temp_df.columns: 
-                    temp_df = temp_df.rename(columns={"แก้ในTrackMo": "สถานะ"})
                 temp_df["ประเภทอุปกรณ์"] = sheet
                 all_data.append(temp_df)
         except: continue
@@ -103,18 +100,7 @@ def handle_export_all():
 # --- 3. Sidebar ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
-    
-    # 🛠️ แก้ไขปัญหา KeyError: เปลี่ยนมาใช้โครงสร้างที่ปลอดภัยที่สุดในการลิงก์กลับหน้าหลัก
-    try:
-        # ดึง Path หน้าแรกสุดของระบบมาใส่โดยอัตโนมัติ (รองรับทุกชื่อไฟล์ ไม่ว่าจะชื่อ app.py หรือ main.py)
-        pages_dict = st.source_util.get_pages("")
-        main_page_path = next(iter(pages_dict.values()))["script_path"]
-        st.page_link(main_page_path, label="Device Claim", icon="📑")
-    except Exception:
-        # แผนสำรองกรณีหาโค้ดภายในไม่เจอ ให้ใส่หน้าว่าง (Streamlit จะพาไปหน้าหลักให้อัตโนมัติ)
-        st.page_link("", label="Device Claim", icon="📑")
-        
-    # ลิงก์หน้าเพจอื่น ๆ ในโฟลเดอร์ pages/
+    st.page_link("app.py", label="Device Claim", icon="📑")
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     st.divider()
@@ -126,12 +112,10 @@ with st.sidebar:
             if new_device and new_device not in st.session_state.available_sheets:
                 try:
                     new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    conn.update(worksheet=new_device, data=new_df)
+                    conn.create(worksheet=new_device, data=new_df)
                     st.session_state.available_sheets.append(new_device)
-                    st.success(f"สร้างหน้า {new_device} สำเร็จ")
                     st.rerun()
-                except Exception as e: 
-                    st.error(f"สร้างไม่สำเร็จเนื่องจาก: {e}")
+                except: st.error("สร้างไม่สำเร็จ")
 
     with st.expander("⚠️ ลบอุปกรณ์"):
         target_del = st.selectbox("เลือก Worksheet ที่จะลบ:", st.session_state.available_sheets)
@@ -156,14 +140,11 @@ with col_ws:
     selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
 
 # ดึงข้อมูลจาก Google Sheets
-has_trackmo_col = False  # ตัวแปรจำว่าดั้งเดิมใช้ชื่อคอลัมน์อะไร
 try:
     df = conn.read(worksheet=selected_sheet, ttl="0")
     if df is not None and not df.empty:
         df.columns = df.columns.str.strip()
-        if "แก้ในTrackMo" in df.columns: 
-            df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
-            has_trackmo_col = True
+        if "แก้ในTrackMo" in df.columns: df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
         df = df.astype(str)
         for col in EXPECTED_COLUMNS:
             if col not in df.columns: df[col] = ""
@@ -247,13 +228,8 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
             new_df_to_add = pd.DataFrame(new_rows_list)
             df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
             
-            # เตรียมความพร้อมคอลัมน์ก่อนเซฟกลับไป Google Sheet
-            save_df = df.copy()
-            if has_trackmo_col and "สถานะ" in save_df.columns:
-                save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-
             try:
-                conn.update(worksheet=selected_sheet, data=save_df)
+                conn.update(worksheet=selected_sheet, data=df)
                 st.success(f"🎉 บันทึกข้อมูลเรียบร้อยแล้วทั้งหมด {len(new_rows_list)} รายการ!")
                 st.session_state.editor_version += 1
                 st.rerun()
@@ -262,7 +238,7 @@ with st.expander("➕ เพิ่มรายการแจ้งซ่อม 
         else:
             st.warning("⚠️ โปรดกรอกข้อมูลในช่อง 'Serial เครื่องที่เสีย' อย่างน้อย 1 รายการก่อนกดบันทึก")
 
-# --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
+# --- 7. ส่วนแก้ไข หรือ ลบรายการ (จัดเรียงโครงสร้างบล็อกใหม่ป้องกัน Error) ---
 if not df.empty:
     with st.expander("📝 แก้ไข หรือ ลบรายการ"):
         sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
@@ -270,19 +246,16 @@ if not df.empty:
         idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
         row = df.loc[idx]
         
+        # ล้างคำว่า nan ออกเพื่อความสวยงาม
         val_d_rec = "" if str(row["วันที่รับแจ้ง"]).lower() == "nan" else str(row["วันที่รับแจ้ง"])
         val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
         val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
 
-        # แก้ไข: จัดการระบบวันที่ให้ปลอดภัย ไม่ให้แอปพลิเคชันล่ม
+        # แยกการทำงานประมวลผลวันที่อย่างสมบูรณ์
         try:
-            date_str = str(row["วันทีนำไปติดตั้งใหม่"]).strip()
-            if date_str and date_str.lower() != "nan" and date_str != "":
-                curr_d_ins = datetime.strptime(date_str, "%Y-%m-%d").date()
-            else:
-                curr_d_ins = date.today() # ใช้เป็นค่าวันปัจจุบันหากค่าเดิมว่าง
+            curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
         except Exception:
-            curr_d_ins = date.today()
+            curr_d_ins = None
 
         with st.form("edit_full_form"):
             e1, e2, e3 = st.columns(3)
@@ -309,19 +282,14 @@ if not df.empty:
                 df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
                 df.at[idx, "สถานะ"] = new_s
                 
-                # เปลี่ยนชื่อคอลัมน์กลับเป็นค่าดั้งเดิมก่อนบันทึก
-                save_df = df.copy()
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"text": "แก้ในTrackMo"})
-
                 try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
+                    conn.update(worksheet=selected_sheet, data=df.astype(str))
                     st.success("อัปเดตเรียบร้อย!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
         
-        # --- ปุ่มสำหรับใช้ลบข้อมูลออกอย่างปลอดภัย ---
+        # --- ปุ่มสำหรับใช้ลบข้อมูลออกอย่างปลอดภัย (แสดงผลถูกต้องแน่นอน) ---
         st.markdown("---")
         st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
         confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
@@ -329,11 +297,8 @@ if not df.empty:
         if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
             if confirm_row_delete:
                 df = df.drop(idx)
-                save_df = df.copy()
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
                 try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
+                    conn.update(worksheet=selected_sheet, data=df.astype(str))
                     st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
                     st.rerun()
                 except Exception as e:
