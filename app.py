@@ -103,11 +103,21 @@ def handle_export_all():
 # --- 3. Sidebar ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
+    
+    # แก้ไขปัญหา KeyError: ดึงหน้าหลักแรกสุดของโปรเจกต์มาใส่ให้อัตโนมัติ
+    try:
+        pages_dict = st.source_util.get_pages("")
+        main_page_path = next(iter(pages_dict.values()))["script_path"]
+        st.page_link(main_page_path, label="Device Claim", icon="📑")
+    except Exception:
+        # หากเกิดข้อผิดพลาดในการดึงข้อมูลระบบ ให้ถอยกลับไปใช้แบบปกติ
+        st.page_link("./app.py", label="Device Claim", icon="📑")
+        
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
+    # ... โค้ดส่วนอื่นๆ ใน Sidebar เหมือนเดิม ...
     
     with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
         new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
