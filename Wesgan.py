@@ -97,4 +97,68 @@ def show_asset_system(conn):
                             df.iloc[st.session_state.row_index] = updated_row_data
                             success_msg = "อัปเดตข้อมูลเรียบร้อยแล้ว!"
                         else:
-                            new_row_df
+                            new_row_df = pd.DataFrame([updated_row_data])
+                            df = pd.concat([df, new_row_df], ignore_index=True)
+                            success_msg = "ลงทะเบียนใหม่เรียบร้อยแล้ว!"
+                        
+                        conn.update(worksheet="Asset Management", data=df.astype(str))
+                        st.success(success_msg)
+                        reset_edit_state()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาด: {e}")
+                else:
+                    st.error("กรุณาระบุ Serial Number")
+
+    # --- 6. ส่วนแสดงผลตารางและปุ่มดาวน์โหลดรายงาน ---
+    st.divider()
+    c1, c2 = st.columns([3, 1])
+
+    with c1:
+        search_term = st.text_input("🔍 ค้นหาในตาราง (S/N, รุ่น, สถานที่):")
+        if search_term:
+            mask = view_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)
+            view_df = view_df[mask]
+
+    with c2:
+        st.write("📊 Report")
+        csv_data = view_df.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="📥 Download CSV",
+            data=csv_data,
+            file_name=f"Asset_Report_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+
+    st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ (คลิกที่ช่องสถานที่เพื่อแก้ไขได้ทันที)")
+
+    # กำหนดคีย์เพื่อให้ทำงานร่วมกับระบบสลับหน้าได้โดยข้อมูลไม่หลุดออก
+    edited_view_df = st.data_editor(
+        view_df,
+        use_container_width=True,
+        hide_index=False,
+        column_config={
+            "Serial Number (เลขซีเรียล)": st.column_config.TextColumn(disabled=True),
+            "Model Name (ชื่อรุ่น)": st.column_config.TextColumn(disabled=True),
+            "วันที่ซื้อ": st.column_config.TextColumn(disabled=True),
+            "Location (สถานที่)": st.column_config.TextColumn(disabled=False) # อนุญาตให้ดับเบิ้ลคลิกแก้ไขสถานที่ได้เลย
+        },
+        key="bulk_edit_location_asset"
+    )
+
+    # ปุ่มบันทึกการแก้ไขสถานที่ลงฐานข้อมูลหลักแบบปลอดภัย (Map สเตทด้วย Serial Number)
+    if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง"):
+        try:
+            # ใช้กลไก Map ข้อมูลกลับด้วย Serial Number ป้องกันบั๊กสลับแถวเวลาใช้ตัวกรองข้อมูล
+            for idx, row in edited_view_df.iterrows():
+                sn_key = row["Serial Number (เลขซีเรียล)"]
+                new_location = row["Location (สถานที่)"]
+                # ทำการอัปเดตตำแหน่งลงตารางหลักจริงของ Google Sheets
+                df.loc[df["Serial Number (เลขซีเรียล)"] == sn_key, "Location (สถานที่)"] = new_location
+            
+            conn.update(worksheet="Asset Management", data=df.astype(str))
+            st.success("🎉 บันทึกการเปลี่ยนสถานที่ลงระบบเรียบร้อยแล้ว!")
+            st.rerun()
+        except Exception as e:
+            st.error(f"ไม่สามารถบันทึกข้อมูลได้เนื่องจาก: {e}")
