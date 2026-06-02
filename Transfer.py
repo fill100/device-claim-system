@@ -1,123 +1,172 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
+from fpdf import FPDF
+import os
 
-# ห่อโค้ดทั้งหมดในฟังก์ชันนี้ เพื่อรองรับการเรียกจาก app.py และรับค่าเชื่อมต่อฐานข้อมูล (conn)
-def show_transfer_system(conn):
-    st.title("✈️ Transfer Management System")
-    st.subheader("ระบบโอนย้ายอุปกรณ์")
+# ลบคำสั่ง st.set_page_config ออกเพื่อไม่ให้ตีกับแอปหลัก (สาเหตุที่ทำให้หน้าจอดำ)
+# และซ่อนเมนูอัตโนมัติของ Streamlit ตามโครงสร้างดั้งเดิมของคุณ
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;} 
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
 
-    # --- 1. กำหนดโครงสร้างข้อมูล ---
-    TRANSFER_COLUMNS = ["วันที่โอนย้าย", "Serial Number", "อุปกรณ์", "จากสาขา/สถานที่", "ไปสาขา/สถานที่", "ผู้โอนย้าย", "สถานะการขนส่ง"]
-
-    # --- 2. ดึงข้อมูลจาก Google Sheets ---
+# ดึงการเชื่อมต่อฐานข้อมูลจากแอปหลัก (หากไม่มี ให้สร้างตัวแปรเชื่อมต่อใหม่เพื่อป้องกันระบบเออร์เรอร์)
+if "conn" in locals():
+    main_conn = conn
+else:
+    from streamlit_gsheets import GSheetsConnection
     try:
-        # ดึงข้อมูลจาก Worksheet ที่ชื่อว่า "Transfer Logs" (หรือปรับเปลี่ยนชื่อตามตารางจริงของคุณได้เลยครับ)
-        df = conn.read(worksheet="Transfer Logs", ttl="0")
-        if df is not None and not df.empty:
-            df.columns = df.columns.str.strip()
-            # ตรวจสอบคอลัมน์ให้ครบตามโครงสร้าง
-            for col in TRANSFER_COLUMNS:
-                if col not in df.columns: df[col] = ""
-            df = df[TRANSFER_COLUMNS]
-        else:
-            df = pd.DataFrame(columns=TRANSFER_COLUMNS)
-    except Exception:
-        df = pd.DataFrame(columns=TRANSFER_COLUMNS)
+        main_conn = st.connection("gsheets", type=GSheetsConnection)
+    except:
+        main_conn = None
 
-    # รายชื่อสาขามาตรฐานเพื่อใช้ในฟอร์ม (อ้างอิงตามหน้าหลัก)
-    BRANCH_LIST = [
-        "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
-        "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)", "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", 
-        "สมุทรสาคร", "สมุทรปราการ", "นครปฐม", "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", 
-        "สระบุรี", "สุพรรณบุรี", "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", 
-        "จันทบุรี", "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร", 
-        "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี", 
-        "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง", "ระนอง", 
-        "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
-        "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
-    ]
-
-    # --- 3. ฟอร์มบันทึกการโอนย้ายใหม่ ---
-    with st.expander("✈️ บันทึกรายการโอนย้ายอุปกรณ์ใหม่", expanded=False):
-        with st.form("transfer_form", clear_on_submit=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                t_sn = st.text_input("Serial Number อุปกรณ์:")
-                t_device = st.text_input("ชื่อ/ประเภทอุปกรณ์ (เช่น PC, Monitor):")
-                t_from = st.selectbox("ต้นทาง (จากสาขา):", BRANCH_LIST, key="tf_from")
-            with col2:
-                t_to = st.selectbox("ปลายทาง (ไปสาขา):", BRANCH_LIST, key="tf_to")
-                t_user = st.text_input("ชื่อผู้ดำเนินเรื่อง / ผู้โอนย้าย:")
-                t_status = st.selectbox("สถานะการขนส่ง:", ["ระหว่างขนส่ง", "ถึงปลายทางแล้ว", "ยกเลิก"])
-            
-            submit_transfer = st.form_submit_button("💾 บันทึกการโอนย้าย", type="primary")
-
-            if submit_transfer:
-                if t_sn.strip() != "" and t_device.strip() != "":
-                    now_thailand = datetime.now()
-                    time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
-                    
-                    new_transfer_data = {
-                        "วันที่โอนย้าย": time_str,
-                        "Serial Number": str(t_sn),
-                        "อุปกรณ์": str(t_device),
-                        "จากสาขา/สถานที่": str(t_from),
-                        "ไปสาขา/สถานที่": str(t_to),
-                        "ผู้โอนย้าย": str(t_user),
-                        "สถานะการขนส่ง": str(t_status)
-                    }
-                    
-                    try:
-                        new_row_df = pd.DataFrame([new_transfer_data])
-                        df = pd.concat([df, new_row_df], ignore_index=True)
-                        
-                        conn.update(worksheet="Transfer Logs", data=df.astype(str))
-                        st.success("🎉 บันทึกข้อมูลการโอนย้ายลงระบบสำเร็จ!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจาก: {e}")
-                else:
-                    st.warning("⚠️ โปรดระบุ Serial Number และ ชื่ออุปกรณ์ ให้ครบถ้วนก่อนบันทึก")
-
-    # --- 4. ตารางแสดงรายการโอนย้ายพร้อมช่องค้นหา ---
-    st.divider()
-    st.markdown("#### 🔍 ค้นหาและดูประวัติการโอนย้าย ทั้งหมด")
+# --- 1. ฟังก์ชันสร้าง PDF (โค้ดดั้งเดิมของคุณ) ---
+def create_transfer_pdf(data):
+    pdf = FPDF()
+    pdf.add_page()
     
-    search_q = st.text_input("พิมพ์เพื่อค้นหา (S/N, อุปกรณ์, สาขา...):", key="search_transfer")
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
+    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+
+    # --- Header (Logo + Address) ---
+    if os.path.exists(logo_path):
+        pdf.image(logo_path, x=10, y=10, w=45)
     
-    view_df = df.copy()
-    if search_q:
-        mask = view_df.astype(str).apply(lambda x: x.str.contains(search_q, case=False)).any(axis=1)
-        view_df = view_df[mask]
+    if os.path.exists(font_path):
+        pdf.add_font('THSarabun', '', font_path)
+        pdf.add_font('THSarabun', 'B', font_path)
+        pdf.set_font('THSarabun', 'B', 14)
+    
+    pdf.set_y(12) 
+    pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "R")
+    pdf.set_font('THSarabun', '', 11)
+    pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
+    pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
+    
+    pdf.set_draw_color(80, 80, 80)
+    pdf.set_line_width(0.6)
+    pdf.line(10, 35, 200, 35) 
+    
+    pdf.ln(12)
+    pdf.set_font('THSarabun', 'B', 18)
+    pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน", 0, 1, "C")
+    
+    pdf.set_font('THSarabun', '', 14)
+    pdf.cell(0, 8, f"วันที่ดำเนินการ: {data['date']}", 0, 1, "R")
+    pdf.cell(0, 8, f"สถานที่ปลายทาง: {data['to_loc']}", 0, 1, "L")
+    pdf.ln(2)
 
-    # ตารางแบบ data_editor เพื่อให้เปลี่ยนสถานะการขนส่งได้สะดวก
-    edited_transfer_df = st.data_editor(
-        view_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "วันที่โอนย้าย": st.column_config.TextColumn(disabled=True),
-            "Serial Number": st.column_config.TextColumn(disabled=True),
-            "อุปกรณ์": st.column_config.TextColumn(disabled=True),
-            "จากสาขา/สถานที่": st.column_config.TextColumn(disabled=True),
-            "ไปสาขา/สถานที่": st.column_config.TextColumn(disabled=True),
-            "ผู้โอนย้าย": st.column_config.TextColumn(disabled=True),
-            "สถานะการขนส่ง": st.column_config.SelectboxColumn("สถานะการขนส่ง", options=["ระหว่างขนส่ง", "ถึงปลายทางแล้ว", "ยกเลิก"], disabled=False)
-        },
-        key="edit_transfer_status_table"
-    )
+    # --- 2. ส่วน Checkbox ---
+    pdf.set_font('THSarabun', 'B', 14)
+    pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
+    pdf.set_line_width(0.2)
+    pdf.set_font('THSarabun', '', 14)
+    
+    types = ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"]
+    x_pos = [15, 55, 95, 135]
+    
+    for i, t_name in enumerate(types):
+        pdf.rect(x_pos[i], pdf.get_y()+2, 4, 4)
+        if data['transfer_type'] == t_name:
+            pdf.set_font('Arial', 'B', 10)
+            pdf.text(x_pos[i]+0.8, pdf.get_y()+5.2, "X") 
+            pdf.set_font('THSarabun', '', 14)
+        
+        pdf.set_x(x_pos[i]+7)
+        display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
+        pdf.cell(40, 8, display_name, 0, 0)
+    pdf.ln(10)
 
-    # ปุ่มสำหรับบันทึกกรณีมีการแก้ไขสถานะบนตาราง
-    if st.button("✅ อัปเดตสถานะการขนส่งที่แก้ไข"):
+    # --- 3. ตารางรายการทรัพย์สิน ---
+    pdf.set_font('THSarabun', 'B', 14)
+    pdf.set_fill_color(240, 240, 240)
+    w_no, w_asset, w_note = 15, 80, 95
+    h_cell = 10
+
+    pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
+    pdf.cell(w_asset, h_cell, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
+    pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
+
+    pdf.set_font('THSarabun', '', 14)
+    for i, row in enumerate(data['items'], 1):
+        asset_val = str(row.get("เลขทรัพย์สิน/ชื่อรายการ", ""))
+        note_val = str(row.get("หมายเหตุ", ""))
+        pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
+        pdf.cell(w_asset, h_cell, f" {asset_val}", 1, 0, "L")
+        pdf.cell(w_note, h_cell, f" {note_val}", 1, 1, "L")
+    
+    # --- 4. Footer & ลายเซ็น ---
+    pdf.ln(7)
+    pdf.set_font('THSarabun', 'B', 11)
+    pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
+
+    pdf.ln(5)
+    w_sign = 63.3
+    pdf.set_font('THSarabun', 'B', 11)
+    pdf.cell(w_sign, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
+    pdf.cell(w_sign, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
+    pdf.cell(w_sign, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
+    pdf.ln(10)
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
+    pdf.set_font('THSarabun', '', 10)
+    pdf.cell(w_sign, 5, f"( {data['s_old']} )", 0, 0, "C")
+    pdf.cell(w_sign, 5, f"( {data['s_new']} )", 0, 0, "C")
+    pdf.cell(w_sign, 5, f"( {data['it_staff']} )", 0, 1, "C")
+    pdf.ln(8)
+    pdf.set_font('THSarabun', 'B', 11)
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+    pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
+    pdf.set_font('THSarabun', '', 10)
+    pdf.cell(w_sign, 5, "( หัวหน้าต้นทาง )", 0, 0, "C")
+    pdf.cell(w_sign, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
+    pdf.cell(w_sign, 5, "( หัวหน้าฝ่าย IT )", 0, 1, "C")
+
+    return pdf.output()
+
+# --- ส่วน UI แสดงผลบนจอหลัก ---
+st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
+
+if "df_data" not in st.session_state:
+    st.session_state.df_data = pd.DataFrame([{"เลขทรัพย์สิน/ชื่อรายการ": "", "หมายเหตุ": ""}])
+
+with st.container(border=True):
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True)
+        st.write("---")
+        st.write("**รายการทรัพย์สิน**")
+        edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_items_editor")
+    with col2:
+        st.write("**ข้อมูลผู้ดำเนินการ**")
+        to_location = st.text_input("สถานที่ปลายทาง")
+        s_old = st.text_input("ชื่อผู้ถือครองเดิม")
+        s_new = st.text_input("ชื่อผู้ถือครองใหม่")
+        it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
+
+if st.button("🚀 Generate PDF & Save Logs"):
+    clean_items = edited_df[edited_df["เลขทรัพย์สิน/ชื่อรายการ"].str.strip() != ""].to_dict('records')
+    if not clean_items or not to_location:
+        st.error("⚠️ กรุณากรอกรายการและสถานที่ปลายทาง")
+    else:
+        current_time_str = (datetime.now() + timedelta(hours=7)).strftime('%d/%m/%Y')
+        pdf_data = {
+            "date": current_time_str,
+            "items": clean_items,
+            "to_loc": to_location,
+            "transfer_type": transfer_type,
+            "s_old": s_old if s_old else "............................",
+            "s_new": s_new if s_new else "............................",
+            "it_staff": it_staff if it_staff else "............................"
+        }
         try:
-            for idx, row in edited_transfer_df.iterrows():
-                sn_key = row["Serial Number"]
-                new_status = row["สถานะการขนส่ง"]
-                df.loc[df["Serial Number"] == sn_key, "สถานะการขนส่ง"] = new_status
+            # 1. รันฟังก์ชันสร้างไฟล์ PDF
+            pdf_out = create_transfer_pdf(pdf_data)
             
-            conn.update(worksheet="Transfer Logs", data=df.astype(str))
-            st.success("🎉 อัปเดตสถานะการขนส่งลงระบบกูเกิ้ลชีตเรียบร้อยแล้ว!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"ไม่สามารถอัปเดตข้อมูลได้: {e}")
+            # 2. บันทึกประวัติการล็อกข้อมูลลง Google Sheets อ
