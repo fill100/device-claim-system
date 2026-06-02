@@ -18,42 +18,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# (... ส่วนของ INITIAL_SHEETS, EXPECTED_COLUMNS, BRANCH_LIST คงเดิมไว้ทั้งหมด ...)
-# (... ส่วนของฟังก์ชัน handle_export_all คงเดิมไว้ทั้งหมด ...)
-
-# --- 3. Sidebar (ปรับเปลี่ยนเฉพาะจุดที่ Error) ---
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    
-    # แก้ไขตรงนี้: เปลี่ยน use_container_width=True เป็น width='stretch'
-    if st.button("📑 Device Claim", width='stretch', type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
-        st.session_state.current_page = "Device Claim"
-        st.rerun()
-        
-    if st.button("🛡️ Asset System", width='stretch', type="primary" if st.session_state.current_page == "Asset System" else "secondary"):
-        st.session_state.current_page = "Asset System"
-        st.rerun()
-        
-    if st.button("✈️ โอนย้ายของ", width='stretch', type="primary" if st.session_state.current_page == "Transfer" else "secondary"):
-        st.session_state.current_page = "Transfer"
-        st.rerun()
-
-# ( ... ส่วนการประมวลผลหน้าย่อย exec() ของคุณคงเดิมไว้ทั้งหมด ... )
-
-# --- จุดสำคัญ: ตารางแสดงผลท้ายสุด (แก้ไขที่นี่) ---
-    # แก้ไขตรงนี้: เปลี่ยน use_container_width=True เป็น width='stretch'
-    st.dataframe(view, width='stretch', hide_index=True)
-
-# --- จุดสำคัญ: ส่วน Bulk Insert (แก้ไขที่นี่) ---
-        edited_input = st.data_editor(
-            default_buffer,
-            num_rows="dynamic",
-            column_config={
-                # ... (column_config คงเดิม)
-            },
-            width='stretch', # <--- แก้จาก use_container_width=True เป็นอันนี้
-            key=f"bulk_editor_{st.session_state.editor_version}"
-        )
+# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (State Control) ---
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Device Claim"
 
 # --- 1. เชื่อมต่อฐานข้อมูลหลัก ---
 try:
