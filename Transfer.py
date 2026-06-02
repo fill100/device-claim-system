@@ -1,29 +1,25 @@
 import streamlit as st
+# โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;} /* ซ่อนเมนูเดิมที่ชื่อ app/Wesgan */
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
 import pandas as pd
 from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
 
-# ลบคำสั่ง st.set_page_config ออกเพื่อไม่ให้ตีกับแอปหลัก (สาเหตุที่ทำให้หน้าจอดำ)
-# และซ่อนเมนูอัตโนมัติของ Streamlit ตามโครงสร้างดั้งเดิมของคุณ
-st.markdown("""
-    <style>
-    [data-testid="stSidebarNav"] {display: none;} 
-    [data-testid="stSidebarNavItems"] {display: none;}
-    </style>
-    """, unsafe_allow_html=True)
+# --- นำ st.set_page_config ออกแล้ว เพื่อให้รันใน exec() ได้โดยหน้าจอไม่ดำ ---
 
-# ดึงการเชื่อมต่อฐานข้อมูลจากแอปหลัก (หากไม่มี ให้สร้างตัวแปรเชื่อมต่อใหม่เพื่อป้องกันระบบเออร์เรอร์)
-if "conn" in locals():
-    main_conn = conn
-else:
-    from streamlit_gsheets import GSheetsConnection
-    try:
-        main_conn = st.connection("gsheets", type=GSheetsConnection)
-    except:
-        main_conn = None
+with st.sidebar:
+    st.markdown("# 💻 IT Management")
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
+    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
 
-# --- 1. ฟังก์ชันสร้าง PDF (โค้ดดั้งเดิมของคุณ) ---
+# --- 1. ฟังก์ชันสร้าง PDF ---
 def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
@@ -60,7 +56,7 @@ def create_transfer_pdf(data):
     pdf.cell(0, 8, f"สถานที่ปลายทาง: {data['to_loc']}", 0, 1, "L")
     pdf.ln(2)
 
-    # --- 2. ส่วน Checkbox ---
+    # --- 2. ส่วน Checkbox (ตามภาพ image_3c084e.png) ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
     pdf.set_line_width(0.2)
@@ -73,7 +69,7 @@ def create_transfer_pdf(data):
         pdf.rect(x_pos[i], pdf.get_y()+2, 4, 4)
         if data['transfer_type'] == t_name:
             pdf.set_font('Arial', 'B', 10)
-            pdf.text(x_pos[i]+0.8, pdf.get_y()+5.2, "X") 
+            pdf.text(x_pos[i]+0.8, pdf.get_y()+5.2, "X") # ทำเครื่องหมาย X
             pdf.set_font('THSarabun', '', 14)
         
         pdf.set_x(x_pos[i]+7)
@@ -81,7 +77,7 @@ def create_transfer_pdf(data):
         pdf.cell(40, 8, display_name, 0, 0)
     pdf.ln(10)
 
-    # --- 3. ตารางรายการทรัพย์สิน ---
+    # --- 3. ตารางรายการทรัพย์สิน (Manual) ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     w_no, w_asset, w_note = 15, 80, 95
@@ -99,7 +95,7 @@ def create_transfer_pdf(data):
         pdf.cell(w_asset, h_cell, f" {asset_val}", 1, 0, "L")
         pdf.cell(w_note, h_cell, f" {note_val}", 1, 1, "L")
     
-    # --- 4. Footer & ลายเซ็น ---
+    # --- 4. Footer & ลายเซ็น (ตามภาพ image_3c108a.png) ---
     pdf.ln(7)
     pdf.set_font('THSarabun', 'B', 11)
     pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
@@ -130,7 +126,7 @@ def create_transfer_pdf(data):
 
     return pdf.output()
 
-# --- ส่วน UI แสดงผลบนจอหลัก ---
+# --- ส่วน UI ---
 st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
 
 if "df_data" not in st.session_state:
@@ -139,10 +135,11 @@ if "df_data" not in st.session_state:
 with st.container(border=True):
     col1, col2 = st.columns([2, 1])
     with col1:
+        # เพิ่ม Radio Button ให้เลือกประเภท
         transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True)
         st.write("---")
         st.write("**รายการทรัพย์สิน**")
-        edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_items_editor")
+        edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True)
     with col2:
         st.write("**ข้อมูลผู้ดำเนินการ**")
         to_location = st.text_input("สถานที่ปลายทาง")
@@ -150,14 +147,13 @@ with st.container(border=True):
         s_new = st.text_input("ชื่อผู้ถือครองใหม่")
         it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)")
 
-if st.button("🚀 Generate PDF & Save Logs"):
+if st.button("🚀 Generate PDF"):
     clean_items = edited_df[edited_df["เลขทรัพย์สิน/ชื่อรายการ"].str.strip() != ""].to_dict('records')
     if not clean_items or not to_location:
         st.error("⚠️ กรุณากรอกรายการและสถานที่ปลายทาง")
     else:
-        current_time_str = (datetime.now() + timedelta(hours=7)).strftime('%d/%m/%Y')
         pdf_data = {
-            "date": current_time_str,
+            "date": (datetime.now() + timedelta(hours=7)).strftime('%d/%m/%Y'),
             "items": clean_items,
             "to_loc": to_location,
             "transfer_type": transfer_type,
@@ -166,7 +162,8 @@ if st.button("🚀 Generate PDF & Save Logs"):
             "it_staff": it_staff if it_staff else "............................"
         }
         try:
-            # 1. รันฟังก์ชันสร้างไฟล์ PDF
             pdf_out = create_transfer_pdf(pdf_data)
-            
-            # 2. บันทึกประวัติการล็อกข้อมูลลง Google Sheets อ
+            st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf")
+            st.success("✅ ครบถ้วนทุกส่วนแล้วครับ!")
+        except Exception as e:
+            st.error(f"Error: {e}")
