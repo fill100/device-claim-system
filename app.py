@@ -3,13 +3,25 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta, date
 
+# --- อิมพอร์ตฟังก์ชันจากไฟล์ย่อยระบบใหม่ เพื่อป้องกันปัญหาตัวแปรสูญหาย ---
+try:
+    from Wesgan import show_asset_system
+except Exception as e:
+    def show_asset_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้เนื่องจากโครงสร้างไฟล์ Wesgan.py ไม่ถูกต้อง: {e}")
+
+try:
+    from Transfer import show_transfer_system
+except Exception as e:
+    def show_transfer_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้เนื่องจากโครงสร้างไฟล์ Transfer.py ไม่ถูกต้อง: {e}")
+
+
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- ปรับปรุงหน้าตา Sidebar และระบบซ่อนเมนูเก่าเพื่อกันบั๊กเล็งเห็นผล ---
+# --- ปรับปรุงหน้าตา UI ---
 st.markdown("""
     <style>
-    /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
+    /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้สว่างชัดเจน */
     html, body, [class*="css"], .stMarkdown, p, span, label {
         color: #ffffff; 
     }
@@ -19,7 +31,7 @@ st.markdown("""
     [data-testid="stSidebarNavItems"] {display: none !important;}
     div[data-testid="stSidebarUserActions"] {display: none !important;}
     
-    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม */
+    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้มอ่านง่าย */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -61,7 +73,7 @@ except Exception as e:
     st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
     st.stop()
 
-# --- 2. ข้อมูลตั้งต้น ---
+# --- 2. ข้อมูลตั้งต้นสำหรับหน้า Device Claim ---
 INITIAL_SHEETS = [
     "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
     "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
@@ -105,11 +117,10 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar (ระบบปุ่มนำทางแบบสลับสเตท ทำงานร่วมกับไฟล์ลูกได้ราบรื่น) ---
+# --- 3. Sidebar (ส่วนควบคุมหลัก) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # ปุ่มควบคุมสลับหน้าเว็บภายในแอปเดียว
     if st.button("📑 Device Claim", use_container_width=True, type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
         st.session_state.current_page = "Device Claim"
         st.rerun()
@@ -122,75 +133,53 @@ with st.sidebar:
         st.session_state.current_page = "Transfer"
         st.rerun()
     
-    st.divider()
-    st.title("🛠️ ตั้งค่าและรายงาน")
-    
-    with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
-        new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
-        if st.button("➕ สร้างหน้าใหม่"):
-            if new_device and new_device not in st.session_state.available_sheets:
-                try:
-                    new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    conn.update(worksheet=new_device, data=new_df)
-                    st.session_state.available_sheets.append(new_device)
-                    st.success(f"สร้างหน้า {new_device} สำเร็จ")
+    # 🌟 [แก้ไขส่วนที่ 2] ตรวจสอบเงื่อนไข: เมนูตั้งค่าเหล่านี้จะยอมให้แสดงผล "เฉพาะตอนอยู่หน้า Device Claim" เท่านั้น
+    if st.session_state.current_page == "Device Claim":
+        st.divider()
+        st.title("🛠️ ตั้งค่าและรายงาน")
+        
+        with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
+            new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
+            if st.button("➕ สร้างหน้าใหม่"):
+                if new_device and new_device not in st.session_state.available_sheets:
+                    try:
+                        new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
+                        conn.update(worksheet=new_device, data=new_df)
+                        st.session_state.available_sheets.append(new_device)
+                        st.success(f"สร้างหน้า {new_device} สำเร็จ")
+                        st.rerun()
+                    except Exception as e: 
+                        st.error(f"สร้างไม่สำเร็จเนื่องจาก: {e}")
+
+        with st.expander("⚠️ ลบอุปกรณ์"):
+            target_del = st.selectbox("เลือก Worksheet ที่จะลบ:", st.session_state.available_sheets)
+            confirm_delete = st.checkbox(f"ยืนยันลบ '{target_del}'")
+            if st.button("🗑️ ยืนยันการลบ"):
+                if confirm_delete and len(st.session_state.available_sheets) > 1:
+                    st.session_state.available_sheets.remove(target_del)
                     st.rerun()
-                except Exception as e: 
-                    st.error(f"สร้างไม่สำเร็จเนื่องจาก: {e}")
 
-    with st.expander("⚠️ ลบอุปกรณ์"):
-        target_del = st.selectbox("เลือก Worksheet ที่จะลบ:", st.session_state.available_sheets)
-        confirm_delete = st.checkbox(f"ยืนยันลบ '{target_del}'")
-        if st.button("🗑️ ยืนยันการลบ"):
-            if confirm_delete and len(st.session_state.available_sheets) > 1:
-                st.session_state.available_sheets.remove(target_del)
-                st.rerun()
-
-    st.divider()
-    st.subheader("📊 Export Report")
-    if st.button("📦 Prepare All Devices Report"):
-        full_report = handle_export_all()
-        if full_report is not None:
-            st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
+        st.divider()
+        st.subheader("📊 Export Report")
+        if st.button("📦 Prepare All Devices Report"):
+            full_report = handle_export_all()
+            if full_report is not None:
+                st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
 
 
-# --- 4. การแสดงผลหน้าเว็บตามหน้าหลักที่เลือก (Routing) ---
+# --- 4. 🔗 การเรนเดอร์เนื้อหาหน้าจอหลัก (เลข 1) ---
 
-# ฟังก์ชันดัมมี่เพื่อล้างและป้องกันสิทธิ์ st.page_link เก่าในไฟล์ย่อยไม่ให้ทำระบบล่ม
-def disabled_page_link(*args, **kwargs):
-    pass
-
-# 🛑 หน้าที่ 1: ASSET SYSTEM (เรียกใช้โค้ดจาก Wesgan.py)
+# 🛑 แสดงผลหน้า: ASSET SYSTEM
 if st.session_state.current_page == "Asset System":
-    # ล้างการทำงาน st.page_link ดั้งเดิมทิ้งชั่วคราวกันแอปพัง
-    original_page_link = st.page_link
-    st.page_link = disabled_page_link
-    try:
-        with open("Wesgan.py", encoding="utf-8") as f:
-            exec(f.read())
-    except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Wesgan.py กรุณาตรวจสอบตำแหน่งไฟล์บนคลัง GitHub")
-    finally:
-        # คืนค่าเดิมหลังรันเสร็จ
-        st.page_link = original_page_link
+    show_asset_system(conn)
     st.stop()
 
-# 🛑 หน้าที่ 2: โอนย้ายของ (เรียกใช้โค้ดจาก Transfer.py)
+# 🛑 แสดงผลหน้า: โอนย้ายของ
 elif st.session_state.current_page == "Transfer":
-    # ล้างการทำงาน st.page_link ดั้งเดิมทิ้งชั่วคราวกันแอปพัง
-    original_page_link = st.page_link
-    st.page_link = disabled_page_link
-    try:
-        with open("Transfer.py", encoding="utf-8") as f:
-            exec(f.read())
-    except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Transfer.py กรุณาตรวจสอบตำแหน่งไฟล์บนคลัง GitHub")
-    finally:
-        # คืนค่าเดิมหลังรันเสร็จ
-        st.page_link = original_page_link
+    show_transfer_system(conn)
     st.stop()
 
-# 🛑 หน้าที่ 3: DEVICE CLAIM (หน้าแรกดั้งเดิม)
+# 🛑 แสดงผลหน้า: DEVICE CLAIM (หน้าหลักดั้งเดิม)
 else:
     st.title("📑 Claim Management System")
 
@@ -386,45 +375,3 @@ else:
                     df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
                     df.at[idx, "สาขา"] = new_b
                     df.at[idx, "counter"] = new_c
-                    df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                    df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                    df.at[idx, "สถานะ"] = new_s
-                    
-                    save_df = df.copy()
-                    if has_trackmo_col and "สถานะ" in save_df.columns:
-                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                    
-                    try:
-                        conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                        st.success("อัปเดตเรียบร้อย!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
-            
-            st.markdown("---")
-            st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
-            confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
-            
-            if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
-                if confirm_row_delete:
-                    df = df.drop(idx)
-                    save_df = df.copy()
-                    if has_trackmo_col and "สถานะ" in save_df.columns:
-                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                    try:
-                        conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                        st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
-                else:
-                    st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
-
-    # --- 8. ตารางผลลัพธ์ ---
-    st.divider()
-    view = df.copy()
-    if q:
-        mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-        view = view[mask]
-
-    st.dataframe(view, use_container_width=True, hide_index=True)
