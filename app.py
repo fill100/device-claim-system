@@ -110,8 +110,7 @@ with st.sidebar:
         main_page_path = next(iter(pages_dict.values()))["script_path"]
         st.page_link(main_page_path, label="Device Claim", icon="📑")
     except Exception:
-        # หากเกิดข้อผิดพลาดในการดึงข้อมูลระบบ ให้ถอยกลับไปใช้แบบปกติ
-        st.page_link(st.source_util.get_pages("app.py") and "app.py" or next(iter(st.source_util.get_pages("").values()))["script_path"], label="Device Claim", icon="📑")
+
         
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
