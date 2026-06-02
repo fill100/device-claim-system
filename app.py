@@ -9,47 +9,51 @@ st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 # --- สไตล์ปรับแต่งหน้าตา UI ดั้งเดิมของคุณ ---
 st.markdown("""
     <style>
-    html, body, [class*="css"], .stMarkdown, p, span, label {
-        color: #ffffff; 
-    }
-    /* ซ่อนเมนูอัตโนมัติของ Streamlit */
-    [data-testid="stSidebarNav"] {display: none !important;}
-    [data-testid="stSidebarNavItems"] {display: none !important;}
-    div[data-testid="stSidebarUserActions"] {display: none !important;}
-    
-    .metric-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    .metric-card {
-        flex: 1;
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        border: 2px solid #444444;
-    }
-    .metric-container .metric-card .metric-value {
-        font-size: 36px;
-        font-weight: 900; 
-        display: block;
-        color: #000000 !important; 
-    }
-    .metric-container .metric-card .metric-label {
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 5px;
-        display: block;
-        color: #000000 !important; 
-    }
+    [data-testid="stSidebar"] { display: none !important; }
+    html, body, .stApp { color: #ffffff; }
+    .metric-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
+    .metric-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid #444444; background-color: #262730; }
+    .metric-value { font-size: 30px; font-weight: 900; color: #ffffff; }
+    .metric-label { font-size: 16px; font-weight: bold; color: #cccccc; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (State Control) ---
-if "current_page" not in st.session_state:
-    st.session_state.current_page = "Device Claim"
+# (... ส่วนของ INITIAL_SHEETS, EXPECTED_COLUMNS, BRANCH_LIST คงเดิมไว้ทั้งหมด ...)
+# (... ส่วนของฟังก์ชัน handle_export_all คงเดิมไว้ทั้งหมด ...)
+
+# --- 3. Sidebar (ปรับเปลี่ยนเฉพาะจุดที่ Error) ---
+with st.sidebar:
+    st.markdown("# 💻 IT Management")
+    
+    # แก้ไขตรงนี้: เปลี่ยน use_container_width=True เป็น width='stretch'
+    if st.button("📑 Device Claim", width='stretch', type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
+        st.session_state.current_page = "Device Claim"
+        st.rerun()
+        
+    if st.button("🛡️ Asset System", width='stretch', type="primary" if st.session_state.current_page == "Asset System" else "secondary"):
+        st.session_state.current_page = "Asset System"
+        st.rerun()
+        
+    if st.button("✈️ โอนย้ายของ", width='stretch', type="primary" if st.session_state.current_page == "Transfer" else "secondary"):
+        st.session_state.current_page = "Transfer"
+        st.rerun()
+
+# ( ... ส่วนการประมวลผลหน้าย่อย exec() ของคุณคงเดิมไว้ทั้งหมด ... )
+
+# --- จุดสำคัญ: ตารางแสดงผลท้ายสุด (แก้ไขที่นี่) ---
+    # แก้ไขตรงนี้: เปลี่ยน use_container_width=True เป็น width='stretch'
+    st.dataframe(view, width='stretch', hide_index=True)
+
+# --- จุดสำคัญ: ส่วน Bulk Insert (แก้ไขที่นี่) ---
+        edited_input = st.data_editor(
+            default_buffer,
+            num_rows="dynamic",
+            column_config={
+                # ... (column_config คงเดิม)
+            },
+            width='stretch', # <--- แก้จาก use_container_width=True เป็นอันนี้
+            key=f"bulk_editor_{st.session_state.editor_version}"
+        )
 
 # --- 1. เชื่อมต่อฐานข้อมูลหลัก ---
 try:
