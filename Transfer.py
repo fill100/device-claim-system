@@ -11,13 +11,7 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
 
-# --- นำ st.set_page_config ออกแล้ว เพื่อให้รันใน exec() ได้โดยหน้าจอไม่ดำ ---
-
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+# --- ลบหน้าต่างเซ็ตหน้าซ้ำ และเมนู page_link ที่ทำให้พังออก เพื่อให้รันใน exec() ได้สมบูรณ์ ---
 
 # --- 1. ฟังก์ชันสร้าง PDF ---
 def create_transfer_pdf(data):
