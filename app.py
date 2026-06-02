@@ -338,4 +338,4 @@ if q:
     mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
     view = view[mask]
 
- st.dataframe(view, use_container_width=True, hide_index=True)
+st.dataframe(view, use_container_width=True, hide_index=True)
