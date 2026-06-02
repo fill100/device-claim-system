@@ -7,7 +7,7 @@ import io
 st.set_page_config(page_title="Asset Management", layout="wide")
 
 # ซ่อนเมนูเดิม
-st.markdown("<style>[data-testid='stSidebarNav'] {display: none;}</style>", unsafe_allow_html=True)
+st.markdown("### ระบบจัดการทรัพย์สิน (Asset System)")
 
 # --- 1. เชื่อมต่อฐานข้อมูล ---
 try:
