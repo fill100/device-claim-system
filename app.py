@@ -6,19 +6,17 @@ from datetime import datetime, timedelta, date
 # --- ตั้งค่าหน้ากระดาษหลัก ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (State Control) ---
-if "current_page" not in st.session_state:
-    st.session_state.current_page = "Device Claim"
-
-# --- สไตล์ปรับแต่งหน้าตา UI (แก้ไขให้ Sidebar แสดงผลทุกหน้า) ---
+# --- สไตล์ปรับแต่งหน้าตา UI ดั้งเดิมของคุณ ---
 st.markdown("""
     <style>
-    /* ซ่อนเฉพาะเมนูอัตโนมัติดั้งเดิมของ Streamlit เพื่อใช้ปุ่ม Sidebar ที่เราสร้างเอง */
+    html, body, [class*="css"], .stMarkdown, p, span, label {
+        color: #ffffff; 
+    }
+    /* ซ่อนเมนูอัตโนมัติของ Streamlit */
     [data-testid="stSidebarNav"] {display: none !important;}
     [data-testid="stSidebarNavItems"] {display: none !important;}
     div[data-testid="stSidebarUserActions"] {display: none !important;}
     
-    /* สไตล์สำหรับกล่องเมตริกในหน้า Device Claim */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -49,15 +47,9 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# เฉพาะกรณีหน้า Device Claim ให้สีข้อความเป็นสีขาวตามธีมเดิม
-if st.session_state.current_page == "Device Claim":
-    st.markdown("""
-        <style>
-        html, body, .stApp {
-            color: #ffffff; 
-        }
-        </style>
-        """, unsafe_allow_html=True)
+# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (State Control) ---
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Device Claim"
 
 # --- 1. เชื่อมต่อฐานข้อมูลหลัก ---
 try:
@@ -126,6 +118,7 @@ with st.sidebar:
         st.session_state.current_page = "Transfer"
         st.rerun()
     
+    # 🌟 [แก้กลุ่มย่อหน้าตรงส่วนนี้แล้ว] ซ่อนเมนูตั้งค่าอัตโนมัติเมื่อย้ายหน้า
     if st.session_state.current_page == "Device Claim":
         st.divider()
         st.title("🛠️ ตั้งค่าและรายงาน")
@@ -167,12 +160,14 @@ if st.session_state.current_page == "Asset System":
         with open("pages/Wesgan.py", encoding="utf-8") as f:
             code = f.read()
             code = code.replace("st.set_page_config", "# st.set_page_config")
+            code = code.replace("st.page_link", "# st.page_link")
             exec(code)
     except FileNotFoundError:
         try:
             with open("Wesgan.py", encoding="utf-8") as f:
                 code = f.read()
                 code = code.replace("st.set_page_config", "# st.set_page_config")
+                code = code.replace("st.page_link", "# st.page_link")
                 exec(code)
         except FileNotFoundError:
             st.error("⚠️ ไม่พบไฟล์ Wesgan.py ในระบบ")
@@ -184,12 +179,14 @@ elif st.session_state.current_page == "Transfer":
         with open("pages/Transfer.py", encoding="utf-8") as f:
             code = f.read()
             code = code.replace("st.set_page_config", "# st.set_page_config")
+            code = code.replace("st.page_link", "# st.page_link")
             exec(code)
     except FileNotFoundError:
         try:
             with open("Transfer.py", encoding="utf-8") as f:
                 code = f.read()
                 code = code.replace("st.set_page_config", "# st.set_page_config")
+                code = code.replace("st.page_link", "# st.page_link")
                 exec(code)
         except FileNotFoundError:
             st.error("⚠️ ไม่พบไฟล์ Transfer.py ในระบบ")
@@ -395,7 +392,7 @@ else:
                     
                     save_df = df.copy()
                     if has_trackmo_col and "สถานะ" in save_df.columns:
-                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                        save_df = save_df.rename(columns={"軟態": "แก้ในTrackMo"})
                     
                     try:
                         conn.update(worksheet=selected_sheet, data=save_df.astype(str))
