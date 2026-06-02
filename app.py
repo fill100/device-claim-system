@@ -169,24 +169,19 @@ with st.sidebar:
 
 # --- 4. 🔗 การเรนเดอร์เนื้อหาหน้าจอหลัก (เลข 1) ---
 
-# --- ฟังก์ชันจัดการโหลดหน้าย่อย ---
-def show_asset_system(conn):
-    try:
-        # ใช้ exec เพื่อรันไฟล์ Wesgan.py
-        with open("Wesgan.py", encoding="utf-8") as f:
-            code = f.read()
-            exec(code)
-    except Exception as err:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err}")
+# 🛑 เช็คโครงสร้างนี้ในไฟล์ app.py ของคุณ
+if st.session_state.current_page == "Asset System":
+    show_asset_system(conn)
+    st.stop()
 
-def show_transfer_system(conn):
-    try:
-        # ใช้ exec เพื่อรันไฟล์ Transfer.py
-        with open("Transfer.py", encoding="utf-8") as f:
-            code = f.read()
-            exec(code)
-    except Exception as err:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err}")
+elif st.session_state.current_page == "Transfer":
+    show_transfer_system(conn)
+    st.stop()
+
+else:
+    # หน้าหลัก Device Claim
+    st.title("📑 Claim Management System")
+    # ... โค้ดส่วนที่เหลือของคุณ ...
 
 # 🛑 แสดงผลหน้า: DEVICE CLAIM (หน้าหลักดั้งเดิม)
 else:
