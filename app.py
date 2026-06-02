@@ -175,11 +175,6 @@ if st.session_state.current_page == "Asset System":
 
 # 🛑 แสดงผลหน้า: โอนย้ายของ
 elif st.session_state.current_page == "Transfer":
-    try:
-        with open("pages/Transfer.py", encoding="utf-8") as f:
-            exec(f.read())
-    except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Transfer.py")
     st.stop()
 
 # 🛑 แสดงผลหน้า: DEVICE CLAIM (หน้าหลักดั้งเดิม)
