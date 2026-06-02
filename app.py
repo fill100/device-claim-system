@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- ปรับปรุงสีตัวหนังสือให้ชัดเจนที่สุด (High Contrast) ---
+# --- ปรับปรุงสีตัวหนังสือและหน้าตา Sidebar เมนูใหม่ ---
 st.markdown("""
     <style>
     /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
@@ -14,9 +14,29 @@ st.markdown("""
         color: #ffffff; 
     }
     
-    /* ซ่อนเมนูเดิม */
+    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit เพื่อเลี่ยงบั๊ก */
     [data-testid="stSidebarNav"] {display: none;}
     [data-testid="stSidebarNavItems"] {display: none;}
+    
+    /* สไตล์สำหรับลิงก์เมนูนำทางแบบกำหนดเอง (Custom Sidebar Menu) */
+    .custom-sidebar-link {
+        display: block;
+        padding: 10px 15px;
+        color: #ffffff !important;
+        text-decoration: none !important;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 16px;
+        transition: background-color 0.2s;
+    }
+    .custom-sidebar-link:hover {
+        background-color: rgba(255,255,255,0.1);
+    }
+    .sidebar-active {
+        background-color: rgba(255,255,255,0.2);
+        font-weight: bold;
+        border-left: 4px solid #007BFF;
+    }
     
     /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม */
     .metric-container {
@@ -100,14 +120,14 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar ---
+# --- 3. Sidebar (ถอนสคริปต์เจ้าปัญหา st.page_link ออกทั้งหมด) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # ใช้ HTML ลิงก์สไตล์เปิดหน้าหลักแทนการใส่ชื่อไฟล์ เพื่อความเสถียรสูงสุดบนเซิร์ฟเวอร์คลาวด์
-    st.markdown('<a href="/" target="_self" style="text-decoration:none; color:white; font-size:16px; font-weight:bold;">📑 Device Claim</a>', unsafe_allow_html=True)
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+    # 🛠️ ปรับเป็น Custom HTML เมนู ลิงก์ตรงตามโครงสร้าง URL เพื่อแก้ปัญหาแอปพังถาวร
+    st.markdown('<a href="/" target="_self" class="custom-sidebar-link sidebar-active">📑 Device Claim</a>', unsafe_allow_html=True)
+    st.markdown('<a href="/Wesgan" target="_self" class="custom-sidebar-link">🛡️ Asset System</a>', unsafe_allow_html=True)
+    st.markdown('<a href="/Transfer" target="_self" class="custom-sidebar-link">✈️ โอนย้ายของ</a>', unsafe_allow_html=True)
     
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
@@ -223,7 +243,7 @@ with st.expander("➕ เพิ่มรายการเคลมใหม่ 
                 
                 save_df = df.copy()
                 if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"text": "แก้ในTrackMo"})
+                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
                 
                 try:
                     conn.update(worksheet=selected_sheet, data=save_df)
@@ -290,91 +310,3 @@ with st.expander("📝 เพิ่มรายการแจ้งซ่อม
                 st.success(f"🎉 บันทึกข้อมูลแบบตารางเรียบร้อยแล้ว {len(new_rows_list)} รายการ!")
                 st.session_state.editor_version += 1
                 st.rerun()
-            except Exception as e:
-                st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
-
-# --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
-if not df.empty:
-    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-        row = df.loc[idx]
-        
-        val_d_rec = "" if str(row["วันที่รับแจ้ง"]).lower() == "nan" else str(row["วันที่รับแจ้ง"])
-        val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
-        val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
-
-        try:
-            date_str = str(row["วันทีนำไปติดตั้งใหม่"]).strip()
-            if date_str and date_str.lower() != "nan" and date_str != "":
-                curr_d_ins = datetime.strptime(date_str, "%Y-%m-%d").date()
-            else:
-                curr_d_ins = date.today()
-        except Exception:
-            curr_d_ins = date.today()
-
-        with st.form("edit_full_form"):
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                new_d_rec = st.text_input("วันที่รับแจ้ง", value=val_d_rec)
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_c = st.text_input("Counter", value=val_counter)
-            with e3:
-                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=val_sn_ctr)
-            
-            submit_edit = st.form_submit_button("💾 บันทึกการแก้ไข")
-            
-            if submit_edit:
-                df = df.astype(object)
-                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                df.at[idx, "สาขา"] = new_b
-                df.at[idx, "counter"] = new_c
-                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "สถานะ"] = new_s
-                
-                save_df = df.copy()
-                # 🛠️ แก้ไขเรียบร้อย: ลบคำว่า watch ที่ติดมาเกินออกแล้ว
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                
-                try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                    st.success("อัปเดตเรียบร้อย!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
-        
-        st.markdown("---")
-        st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
-        confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
-        
-        if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
-            if confirm_row_delete:
-                df = df.drop(idx)
-                save_df = df.copy()
-                if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
-                try:
-                    conn.update(worksheet=selected_sheet, data=save_df.astype(str))
-                    st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
-            else:
-                st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
-
-# --- 8. ตารางผลลัพธ์ ---
-st.divider()
-view = df.copy()
-if q:
-    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-    view = view[mask]
-
-st.dataframe(view, use_container_width=True, hide_index=True)
