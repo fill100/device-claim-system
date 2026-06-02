@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- ปรับปรุงหน้าตา Sidebar และปุ่มควบคุมเมนู ---
+# --- ปรับปรุงหน้าตา Sidebar และระบบซ่อนเมนูเก่าเพื่อกันบั๊กเล็งเห็นผล ---
 st.markdown("""
     <style>
     /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
@@ -14,15 +14,10 @@ st.markdown("""
         color: #ffffff; 
     }
     
-    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit ทั้งหมด */
-    [data-testid="stSidebarNav"] {display: none;}
-    [data-testid="stSidebarNavItems"] {display: none;}
-    
-    /* สไตล์สำหรับปุ่มเมนูนำทางใน Sidebar */
-    .stSidebar [data-testid="stForm"] {
-        border: none;
-        padding: 0;
-    }
+    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit ทั้งหมดแบบเด็ดขาด */
+    [data-testid="stSidebarNav"] {display: none !important;}
+    [data-testid="stSidebarNavItems"] {display: none !important;}
+    div[data-testid="stSidebarUserActions"] {display: none !important;}
     
     /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม */
     .metric-container {
@@ -55,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (Routing System) ---
+# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (Single-page Routing) ---
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Device Claim"
 
@@ -110,11 +105,11 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar (เปลี่ยนมาใช้ระบบกดปุ่มนำทางแบบแท้จริง ลิงก์ไม่หลุดแน่นอน) ---
+# --- 3. Sidebar (ระบบปุ่มนำทางแบบสลับสเตท ทำงานร่วมกับไฟล์ลูกได้ราบรื่น) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # เมนูปุ่มกดที่ตรวจจับหน้าปัจจุบันอย่างแม่นยำ
+    # ปุ่มควบคุมสลับหน้าเว็บภายในแอปเดียว
     if st.button("📑 Device Claim", use_container_width=True, type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
         st.session_state.current_page = "Device Claim"
         st.rerun()
@@ -159,31 +154,43 @@ with st.sidebar:
             st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
 
 
-# --- 4. ตรวจจับการเรนเดอร์หน้าเว็บตามเมนูที่เลือก ---
+# --- 4. การแสดงผลหน้าเว็บตามหน้าหลักที่เลือก (Routing) ---
 
-# 🛑 หน้าที่ 1: ASSET SYSTEM
+# ฟังก์ชันดัมมี่เพื่อล้างและป้องกันสิทธิ์ st.page_link เก่าในไฟล์ย่อยไม่ให้ทำระบบล่ม
+def disabled_page_link(*args, **kwargs):
+    pass
+
+# 🛑 หน้าที่ 1: ASSET SYSTEM (เรียกใช้โค้ดจาก Wesgan.py)
 if st.session_state.current_page == "Asset System":
-    st.title("🛡️ Asset System")
+    # ล้างการทำงาน st.page_link ดั้งเดิมทิ้งชั่วคราวกันแอปพัง
+    original_page_link = st.page_link
+    st.page_link = disabled_page_link
     try:
-        # เรียกใช้งานโค้ดภายในไฟล์ Wesgan.py
         with open("Wesgan.py", encoding="utf-8") as f:
             exec(f.read())
     except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Wesgan.py กรุณาตรวจสอบว่าชื่อไฟล์ถูกต้องและอยู่บนโฟลเดอร์หลัก")
+        st.error("⚠️ ไม่พบไฟล์ Wesgan.py กรุณาตรวจสอบตำแหน่งไฟล์บนคลัง GitHub")
+    finally:
+        # คืนค่าเดิมหลังรันเสร็จ
+        st.page_link = original_page_link
     st.stop()
 
-# 🛑 หน้าที่ 2: โอนย้ายของ
+# 🛑 หน้าที่ 2: โอนย้ายของ (เรียกใช้โค้ดจาก Transfer.py)
 elif st.session_state.current_page == "Transfer":
-    st.title("✈️ โอนย้ายของ")
+    # ล้างการทำงาน st.page_link ดั้งเดิมทิ้งชั่วคราวกันแอปพัง
+    original_page_link = st.page_link
+    st.page_link = disabled_page_link
     try:
-        # เรียกใช้งานโค้ดภายในไฟล์ Transfer.py
         with open("Transfer.py", encoding="utf-8") as f:
             exec(f.read())
     except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Transfer.py กรุณาตรวจสอบว่าชื่อไฟล์ถูกต้องและอยู่บนโฟลเดอร์หลัก")
+        st.error("⚠️ ไม่พบไฟล์ Transfer.py กรุณาตรวจสอบตำแหน่งไฟล์บนคลัง GitHub")
+    finally:
+        # คืนค่าเดิมหลังรันเสร็จ
+        st.page_link = original_page_link
     st.stop()
 
-# 🛑 หน้าที่ 3: DEVICE CLAIM (หน้าหลักดั้งเดิม)
+# 🛑 หน้าที่ 3: DEVICE CLAIM (หน้าแรกดั้งเดิม)
 else:
     st.title("📑 Claim Management System")
 
