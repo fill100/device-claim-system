@@ -2,18 +2,25 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta, date
+import sys # อย่าลืม import sys ไว้ด้านบนสุดของไฟล์ด้วยนะครับ
 
-# --- อิมพอร์ตฟังก์ชันจากไฟล์ย่อยระบบใหม่ เพื่อป้องกันปัญหาตัวแปรสูญหาย ---
-try:
-    from Wesgan import show_asset_system
-except Exception as e:
-    def show_asset_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้เนื่องจากโครงสร้างไฟล์ Wesgan.py ไม่ถูกต้อง: {e}")
+def show_asset_system(conn):
+    try:
+        with open("Wesgan.py", encoding="utf-8") as f:
+            code = f.read()
+            exec(code)
+    except:
+        err_type, err_value, traceback = sys.exc_info()
+        st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err_value}")
 
-try:
-    from Transfer import show_transfer_system
-except Exception as e:
-    def show_transfer_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้เนื่องจากโครงสร้างไฟล์ Transfer.py ไม่ถูกต้อง: {e}")
-
+def show_transfer_system(conn):
+    try:
+        with open("Transfer.py", encoding="utf-8") as f:
+            code = f.read()
+            exec(code)
+    except:
+        err_type, err_value, traceback = sys.exc_info()
+        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err_value}")
 
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
