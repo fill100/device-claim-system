@@ -44,13 +44,6 @@ def reset_edit_state():
     st.session_state.row_index = None
 
 # --- 5. Sidebar & Filtering ---
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
-    st.divider()
-    
     st.subheader("🎯 ตัวกรอง Model")
     all_models = ["ทั้งหมด"] + sorted(df["Model Name (ชื่อรุ่น)"].unique().tolist())
     filter_model = st.selectbox("เลือกดูเฉพาะรุ่น:", all_models)
