@@ -104,16 +104,17 @@ def handle_export_all():
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # แก้ไขปัญหา KeyError และจัดย่อหน้าบล็อก try-except ให้ถูกต้อง
+    # 🛠️ แก้ไขปัญหา KeyError: เปลี่ยนมาใช้โครงสร้างที่ปลอดภัยที่สุดในการลิงก์กลับหน้าหลัก
     try:
+        # ดึง Path หน้าแรกสุดของระบบมาใส่โดยอัตโนมัติ (รองรับทุกชื่อไฟล์ ไม่ว่าจะชื่อ app.py หรือ main.py)
         pages_dict = st.source_util.get_pages("")
         main_page_path = next(iter(pages_dict.values()))["script_path"]
         st.page_link(main_page_path, label="Device Claim", icon="📑")
     except Exception:
-        # หากดึงข้อมูลระบบไม่ได้ ให้ถอยกลับมาใช้ Path ปกติ (ย่อหน้าตรงนี้ต้องเยื้องเข้ามา 8 ช่อง)
-        st.page_link("app.py", label="Device Claim", icon="📑")
+        # แผนสำรองกรณีหาโค้ดภายในไม่เจอ ให้ใส่หน้าว่าง (Streamlit จะพาไปหน้าหลักให้อัตโนมัติ)
+        st.page_link("", label="Device Claim", icon="📑")
         
-    # ลิงก์หน้าเพจอื่น ๆ จัดย่อหน้าให้ตรงกับแนว try/except หลัก (เยื้องเข้าจาก left สุด 4 ช่อง)
+    # ลิงก์หน้าเพจอื่น ๆ ในโฟลเดอร์ pages/
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     st.divider()
