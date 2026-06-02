@@ -119,7 +119,6 @@ def handle_export_all():
 
 # --- 3. Sidebar (ส่วนควบคุมหลัก) ---
 with st.sidebar:
-    st.markdown("# 💻 IT Management")
     
     if st.button("📑 Device Claim", use_container_width=True, type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
         st.session_state.current_page = "Device Claim"
