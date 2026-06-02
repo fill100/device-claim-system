@@ -156,6 +156,7 @@ with st.sidebar:
 
 # 🛑 หน้าย่อยที่ 1: ASSET SYSTEM
 if st.session_state.current_page == "Asset System":
+    st.markdown("""<style>[data-testid="stSidebar"] {display: none !important;}</style>""", unsafe_allow_html=True)
     try:
         with open("pages/Wesgan.py", encoding="utf-8") as f:
             code = f.read()
@@ -175,6 +176,7 @@ if st.session_state.current_page == "Asset System":
 
 # 🛑 หน้าย่อยที่ 2: โอนย้ายของ
 elif st.session_state.current_page == "Transfer":
+    st.markdown("""<style>[data-testid="stSidebar"] {display: none !important;}</style>""", unsafe_allow_html=True)
     try:
         with open("pages/Transfer.py", encoding="utf-8") as f:
             code = f.read()
