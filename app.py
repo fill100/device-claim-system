@@ -1,316 +1,183 @@
 import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
-# --- ตั้งค่าหน้ากระดาษ ---
-st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
+# 1. ตั้งค่าพื้นฐานของโปรแกรม (ต้องอยู่บรรทัดแรกสุด)
+st.set_page_config(page_title="JVFS Device Claim & Logistics", layout="wide")
 
-# --- ปรับปรุงสีตัวหนังสือให้ชัดเจนที่สุด (High Contrast) ---
-st.markdown("""
-    <style>
-    /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้เข้มขึ้น */
-    html, body, [class*="css"], .stMarkdown, p, span, label {
-        color: #ffffff !important; /* สีขาวสำหรับข้อความทั่วไปบนพื้นหลังมืด */
-    }
-    
-    /* ซ่อนเมนูเดิม */
-    [data-testid="stSidebarNav"] {display: none;}
-    [data-testid="stSidebarNavItems"] {display: none;}
-    
-    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้ม (เพื่อให้อ่านออกบนพื้นสีสว่าง) */
-    .metric-container {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-    .metric-card {
-        flex: 1;
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        border: 2px solid #444444;
-    }
-    .metric-value {
-        font-size: 36px;
-        font-weight: 900; /* หนาพิเศษ */
-        display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำ */
-    }
-    .metric-label {
-        font-size: 18px;
-        font-weight: bold;
-        margin-top: 5px;
-        display: block;
-        color: #000000 !important; /* บังคับเป็นสีดำ */
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. ฟังก์ชันแชร์สิทธิ์การเชื่อมต่อฐานข้อมูล Google Sheets
+def get_sheets_connection():
+    if "connections" not in st.secrets:
+        st.error("❌ ไม่พบโครงสร้าง Secrets กรุณาตั้งค่า Spreadsheet URL ก่อนครับ")
+        st.stop()
+    try:
+        conn = st.connection("gsheets", type=GSheetsConnection)
+        return conn
+    except Exception:
+        st.error("❌ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้")
+        st.stop()
 
-# --- 1. เชื่อมต่อฐานข้อมูล ---
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-except Exception as e:
-    st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
-    st.stop()
+# ฐานข้อมูลสาขาจากไฟล์ของคุณ
+branches_list = [
+    "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", 
+    "กรุงเทพมหานคร 5 (สจก.9)", "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)",
+    "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", "สมุทรสาคร", "สมุทรปราการ", "นครปฐม",
+    "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", "สระบุรี", "สุพรรณบุรี",
+    "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", "จันทบุรี",
+    "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร",
+    "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี",
+    "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง",
+    "ระนอง", "สงขลา", "สุราษฎร์ธานี", "กระบี่"
+]
 
-# --- 2. ข้อมูลตั้งต้น ---
-INITIAL_SHEETS = [
-    "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
+device_types = [
+    "Signature pad", "Passport Scanner", "Iris Scanner", "Printer Thermal (ปริ้นคิว)",
     "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
     "Android Box", "Adapter Android Box", "Monitor", "PC", "CCTV", "TV"
 ]
 
-if 'available_sheets' not in st.session_state:
-    st.session_state.available_sheets = INITIAL_SHEETS.copy()
+# =====================================================================
+# 🛠️ ฟังก์ชันของหน้าต่างแต่ละหน้า (จับแยกกลุ่มชัดเจน)
+# =====================================================================
 
-EXPECTED_COLUMNS = [
-    "วันที่รับแจ้ง", "วันทีนำไปติดตั้งใหม่", "สาขา", 
-    "counter", "Serial เครื่องที่เสีย", "Serial เครื่องที่ส่งให้ศูนย์", "สถานะ"
-]
+# [หน้าหลัก 1] หน้าภาพรวมระบบงานเคลม
+def claim_dashboard():
+    st.title("📊 ภาพรวมระบบงานเคลม (Dashboard)")
+    st.write("ยินดีต้อนรับสู่ระบบ JVFS Device Claim System ส่วนนี้คือหน้าหลักสำหรับดูภาพรวมครับ")
+    # คุณสามารถเพิ่มกราฟสรุป หรือสรุปยอด Pending/inprogress/Done ตรงนี้ได้ในอนาคต
 
-BRANCH_LIST = [
-    "One Bangkok", "กรุงเทพมหานคร 1 (สจก.2)", "กรุงเทพมหานคร 2 (สจก.5)", "กรุงเทพมหานคร 5 (สจก.9)", 
-    "กรุงเทพมหานคร 6 (สจก.10)", "กรุงเทพมหานคร 4 (สจก.7)", "กรุงเทพมหานคร 3 (สจก.3)", "นนทบุรี", 
-    "สมุทรสาคร", "สมุทรปราการ", "นครปฐม", "ราชบุรี", "เพชรบุรี", "ปทุมธานี", "พระนครศรีอยุธยา", 
-    "สระบุรี", "สุพรรณบุรี", "ปราจีนบุรี", "ฉะเชิงเทรา", "ชลบุรี", "EEC จ.ชลบุรี", "ระยอง", "ตราด", 
-    "จันทบุรี", "แรกรับ สระแก้ว", "ขอนแก่น", "นครราชสีมา", "แรกรับ หนองคาย", "แรกรับ มุกดาหาร", 
-    "อุบลราชธานี", "แรกรับ ตาก", "ตาก", "เชียงใหม่", "เชียงราย", "แพร่", "กาญจนบุรี", 
-    "นครศรีธรรมราช", "ชุมพร", "ประจวบคีรีขันธ์", "ภูเก็ต", "พังงา", "แรกรับ ระนอง", "ระนอง", 
-    "สงขลา", "สุราษฎร์ธานี", "Truck1", "Truck2", "Truck3", "Truck4", "Truck5", "Truck6", 
-    "Bus1", "Bus2", "ศูนย์กำกับ", "ไอทีสแควร์ ชั้น T"
-]
-
-def convert_df(df_to_convert):
-    return df_to_convert.to_csv(index=False).encode('utf-8-sig')
-
-def handle_export_all():
-    all_data = []
-    for sheet in st.session_state.available_sheets:
-        try:
-            temp_df = conn.read(worksheet=sheet, ttl="0")
-            if temp_df is not None and not temp_df.empty:
-                temp_df["ประเภทอุปกรณ์"] = sheet
-                all_data.append(temp_df)
-        except: continue
-    return pd.concat(all_data, ignore_index=True) if all_data else None
-
-# --- 3. Sidebar ---
-with st.sidebar:
-    st.markdown("# 💻 IT Management")
-    st.page_link("app.py", label="Device Claim", icon="📑")
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
-    st.divider()
-    st.title("🛠️ ตั้งค่าและรายงาน")
+# [หน้ารอง 1-1] บันทึกและติดตามงานเคลม
+def claim_system_page():
+    st.title("📑 บันทึกและติดตามงานเคลม")
+    st.caption("ระบบบันทึก ตรวจสอบ และติดตามสถานะการเคลมอุปกรณ์ไอทีประจำศูนย์บริการ")
     
-    with st.expander("🆕 เพิ่มอุปกรณ์ใหม่"):
-        new_device = st.text_input("ระบุชื่ออุปกรณ์ใหม่:")
-        if st.button("➕ สร้างหน้าใหม่"):
-            if new_device and new_device not in st.session_state.available_sheets:
-                try:
-                    new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    conn.create(worksheet=new_device, data=new_df)
-                    st.session_state.available_sheets.append(new_device)
-                    st.rerun()
-                except: st.error("สร้างไม่สำเร็จ")
+    conn = get_sheets_connection()
+    df = conn.read(ttl="0")
 
-    with st.expander("⚠️ ลบอุปกรณ์"):
-        target_del = st.selectbox("เลือก Worksheet ที่จะลบ:", st.session_state.available_sheets)
-        confirm_delete = st.checkbox(f"ยืนยันลบ '{target_del}'")
-        if st.button("🗑️ ยืนยันการลบ"):
-            if confirm_delete and len(st.session_state.available_sheets) > 1:
-                st.session_state.available_sheets.remove(target_del)
+    with st.expander("➕ เพิ่มรายการเคลมใหม่", expanded=False):
+        with st.form("main_form", clear_on_submit=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                category = st.selectbox("ประเภทอุปกรณ์", device_types)
+                branch = st.selectbox("สาขาที่พบปัญหา", branches_list)
+                asset_no = st.text_input("Asset No.")
+                sn_faulty = st.text_input("S/N เครื่องที่เสีย")
+            with col2:
+                status = st.selectbox("สถานะปัจจุบัน", ["Pending", "inprogress", "Done"])
+                symptom = st.text_area("อาการเสียโดยละเอียด")
+                sn_new = st.text_input("S/N เครื่องใหม่ / ของเปลี่ยนทดแทน")
+            
+            if st.form_submit_button("💾 บันทึกข้อมูลลง Google Sheets"):
+                new_row = pd.DataFrame([{
+                    "วันที่บันทึก": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                    "ประเภทอุปกรณ์": category,
+                    "สาขา": branch,
+                    "Asset No.": asset_no,
+                    "S/N เครื่องเสีย": sn_faulty,
+                    "อาการเสีย": symptom,
+                    "สถานะ": status,
+                    "S/N เครื่องใหม่": sn_new
+                }])
+                updated_df = pd.concat([df, new_row], ignore_index=True)
+                conn.update(data=updated_df)
+                st.success("✅ อัปเดตข้อมูลเข้าฐานข้อมูลเรียบร้อยแล้ว!")
                 st.rerun()
 
     st.divider()
-    st.subheader("📊 Export Report")
-    if st.button("📦 Prepare All Devices Report"):
-        full_report = handle_export_all()
-        if full_report is not None:
-            st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
+    st.subheader("🔍 ค้นหาและคัดกรองข้อมูล")
+    search_col1, search_col2 = st.columns([2, 1])
+    with search_col1:
+        search_query = st.text_input("🔎 พิมพ์คำค้นหา (เช่น S/N, Asset, ชื่อจังหวัด...)", placeholder="พิมพ์เพื่อสแกนหาคำ...")
+    with search_col2:
+        options = ["ทั้งหมด"] + sorted(df["ประเภทอุปกรณ์"].unique().tolist()) if not df.empty else ["ทั้งหมด"]
+        filter_cat = st.selectbox("🏷️ เลือกเฉพาะอุปกรณ์", options)
 
-# --- 4. หน้าหลัก: เลือก Worksheet และ ค้นหา ---
-st.title("📑 Claim Management System")
+    view_df = df.copy()
+    if filter_cat != "ทั้งหมด":
+        view_df = view_df[view_df["ประเภทอุปกรณ์"] == filter_cat]
+    if search_query:
+        mask = view_df.astype(str).apply(lambda x: x.str.contains(search_query, case=False, na=False)).any(axis=1)
+        view_df = view_df[mask]
 
-col_ws, col_search = st.columns([1, 2])
-with col_ws:
-    selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
-
-# ดึงข้อมูลจาก Google Sheets
-try:
-    df = conn.read(worksheet=selected_sheet, ttl="0")
-    if df is not None and not df.empty:
-        df.columns = df.columns.str.strip()
-        if "แก้ในTrackMo" in df.columns: df = df.rename(columns={"แก้ในTrackMo": "สถานะ"})
-        df = df.astype(str)
-        for col in EXPECTED_COLUMNS:
-            if col not in df.columns: df[col] = ""
-        df = df[EXPECTED_COLUMNS]
+    if not view_df.empty:
+        st.write(f"📊 พบผลลัพธ์ข้อมูลทั้งหมด {len(view_df)} รายการ")
+        st.dataframe(view_df, use_container_width=True, hide_index=True)
     else:
-        df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-except Exception:
-    df = pd.DataFrame(columns=EXPECTED_COLUMNS)
+        st.info("💡 ไม่พบข้อมูลตามเงื่อนไข")
 
-with col_search:
-    q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
 
-# --- 5. Dashboard Metrics ---
-status_col = df["สถานะ"].str.strip().str.lower()
-inprogress = len(df[status_col == "inprogress"])
-done = len(df[status_col == "done"])
+# [หน้าหลัก 2] หน้าภาพรวมระบบจัดส่ง
+def logistics_dashboard():
+    st.title("🚚 ภาพรวมระบบงานจัดส่ง (Logistics Dashboard)")
+    st.write("ส่วนงานจัดการคลังสินค้า พัสดุ และการขนส่งอุปกรณ์เคลมไปยังศูนย์บริการต่างๆ")
 
-st.markdown(f"""
-    <div class="metric-container">
-        <div class="metric-card" style="background-color: #D1E9FF; border-color: #007BFF;">
-            <span class="metric-label">ทั้งหมดในหน้านี้</span>
-            <span class="metric-value">{len(df)}</span>
-        </div>
-        <div class="metric-card" style="background-color: #FFF9C4; border-color: #FBC02D;">
-            <span class="metric-label">In Progress (กำลังซ่อม)</span>
-            <span class="metric-value">{inprogress}</span>
-        </div>
-        <div class="metric-card" style="background-color: #C8E6C9; border-color: #388E3C;">
-            <span class="metric-label">Done (เสร็จสิ้น)</span>
-            <span class="metric-value">{done}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
-# --- 6. ส่วนฟอร์มเพิ่มข้อมูล (Bulk Insert) ---
-with st.expander("➕ เพิ่มรายการแจ้งซ่อม (กรอกพร้อมกันได้หลายรายการ)"):
-    if "editor_version" not in st.session_state:
-        st.session_state.editor_version = 0
-
-    default_buffer = pd.DataFrame([{
-        "สาขา": "One Bangkok", "counter": "", "Serial เครื่องที่เสีย (บังคับ)": "", "Serial เครื่องที่ส่งให้ศูนย์": "", "สถานะ": "inprogress"
-    }])
-
-    st.markdown("💡 *คุณสามารถกด `+ Add row` ที่ท้ายตารางเพื่อพิมพ์เพิ่ม หรือก๊อปปี้ข้อมูลจาก Excel มาวาง (Ctrl+V) ได้เลย*")
+# [หน้ารอง 2-1] ออกใบปะหน้าพัสดุ & ข้อมูลศูนย์ฯ
+def shipping_label_page():
+    st.title("📦 ข้อมูลที่อยู่ศูนย์ฯ & ใบปะหน้า")
     
-    edited_input = st.data_editor(
-        default_buffer,
-        num_rows="dynamic",
-        column_config={
-            "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
-            "counter": st.column_config.TextColumn("Counter"),
-            "Serial เครื่องที่เสีย (บังคับ)": st.column_config.TextColumn("Serial เครื่องที่เสีย", required=True),
-            "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
-            "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
-        },
-        use_container_width=True,
-        key=f"bulk_editor_{st.session_state.editor_version}"
-    )
-
-    if st.button("💾 บันทึกทุกรายการลงฐานข้อมูล", type="primary"):
-        valid_rows = edited_input[edited_input["Serial เครื่องที่เสีย (บังคับ)"].fillna("").str.strip() != ""].copy()
-        
-        if not valid_rows.empty:
-            now_thailand = datetime.now() + timedelta(hours=7)
-            time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+    tab1, tab2 = st.tabs(["🖨️ ออกใบปะหน้าพัสดุ", "🏠 รายชื่อศูนย์บริการ"])
+    with tab1:
+        st.subheader("📋 รายละเอียดพัสดุจัดส่ง")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("#### 👤 **ผู้ส่ง (From)**")
+            s_name = st.text_input("ชื่อผู้ส่ง / ฝ่ายงาน", value="แผนก IT - JVFS สำนักงานใหญ่")
+            s_branch = st.selectbox("จากสาขา/คลัง", ["สำนักงานใหญ่ (HQ)"] + branches_list)
+            s_addr = st.text_area("ที่อยู่จัดส่งต้นทาง", value="อาคาร JVFS เลขที่... แขวง... เขต... กรุงเทพฯ 10xxx", height=80)
+            s_phone = st.text_input("เบอร์โทรศัพท์ผู้ส่ง", value="02-XXX-XXXX")
+        with c2:
+            st.markdown("#### 📍 **ผู้รับ (To)**")
+            r_name = st.text_input("ชื่อผู้รับ / เจ้าหน้าที่", value="เจ้าหน้าที่ปฏิบัติงานประจำศูนย์บริการ")
+            r_branch = st.selectbox("ปลายทางศูนย์บริการ", branches_list)
+            r_addr = st.text_area("ที่อยู่จัดส่งปลายทาง", placeholder="กรุณาระบุที่อยู่จัดส่งจริง...", height=80)
+            r_phone = st.text_input("เบอร์โทรศัพท์ผู้รับ", placeholder="เช่น 08X-XXX-XXXX")
             
-            new_rows_list = []
-            for _, row in valid_rows.iterrows():
-                sn_center = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).strip().lower() == "none" else row["Serial เครื่องที่ส่งให้ศูนย์"]
-                
-                new_rows_list.append({
-                    "วันที่รับแจ้ง": time_str,
-                    "วันทีนำไปติดตั้งใหม่": "",
-                    "สาขา": row["สาขา"],
-                    "counter": row["counter"],
-                    "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย (บังคับ)"],
-                    "Serial เครื่องที่ส่งให้ศูนย์": sn_center,
-                    "สถานะ": row["สถานะ"]
-                })
-            
-            new_df_to_add = pd.DataFrame(new_rows_list)
-            df = pd.concat([df, new_df_to_add], ignore_index=True).astype(str)
-            
-            try:
-                conn.update(worksheet=selected_sheet, data=df)
-                st.success(f"🎉 บันทึกข้อมูลเรียบร้อยแล้วทั้งหมด {len(new_rows_list)} รายการ!")
-                st.session_state.editor_version += 1
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
-        else:
-            st.warning("⚠️ โปรดกรอกข้อมูลในช่อง 'Serial เครื่องที่เสีย' อย่างน้อย 1 รายการก่อนกดบันทึก")
+        st.divider()
+        label_html = f"""
+        <div style="border: 3px dashed #1e3a8a; padding: 25px; border-radius: 12px; background-color: #fff; color: #111; font-family: sans-serif;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="width: 45%; border-right: 2px solid #e5e7eb; padding-right: 20px; vertical-align: top;">
+                        <span style="background-color: #6b7280; color: #fff; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px;">Sender (ผู้ส่ง)</span>
+                        <p style="margin-top: 12px; font-size: 13px;"><b>{s_name}</b><br>สาขา: {s_branch}<br>ที่อยู่: {s_addr}<br><b>โทร: {s_phone}</b></p>
+                    </td>
+                    <td style="width: 55%; padding-left: 20px; vertical-align: top;">
+                        <span style="background-color: #16a34a; color: #fff; padding: 4px 10px; font-size: 12px; font-weight: bold; border-radius: 4px;">Receiver (ผู้รับ)</span>
+                        <p style="margin-top: 12px; font-size: 16px;">📍 <b>ศูนย์บริการ: {r_branch}</b><br><b>ชื่อผู้รับ:</b> {r_name}<br><b>ที่อยู่:</b> {r_addr}<br>📞 <b>โทร: {r_phone}</b></p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        """
+        st.markdown(label_html, unsafe_allow_html=True)
 
-# --- 7. ส่วนแก้ไข หรือ ลบรายการ (จัดเรียงโครงสร้างบล็อกใหม่ป้องกัน Error) ---
-if not df.empty:
-    with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-        sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-        sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-        idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-        row = df.loc[idx]
-        
-        # ล้างคำว่า nan ออกเพื่อความสวยงาม
-        val_d_rec = "" if str(row["วันที่รับแจ้ง"]).lower() == "nan" else str(row["วันที่รับแจ้ง"])
-        val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
-        val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
+    with tab2:
+        st.subheader("🏠 ทำเนียบข้อมูลศูนย์บริการทั้งหมด")
+        b_search = st.text_input("🔍 ค้นหาจังหวัดหรือชื่อศูนย์", placeholder="พิมพ์ชื่อศูนย์...")
+        master_branch_df = pd.DataFrame({"ลำดับที่": range(1, len(branches_list) + 1), "ชื่อศูนย์บริการ": branches_list})
+        if b_search:
+            master_branch_df = master_branch_df[master_branch_df["ชื่อศูนย์บริการ"].str.contains(b_search, case=False)]
+        st.dataframe(master_branch_df, use_container_width=True, hide_index=True)
 
-        # แยกการทำงานประมวลผลวันที่อย่างสมบูรณ์
-        try:
-            curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
-        except Exception:
-            curr_d_ins = None
 
-        with st.form("edit_full_form"):
-            e1, e2, e3 = st.columns(3)
-            with e1:
-                new_d_rec = st.text_input("วันที่รับแจ้ง", value=val_d_rec)
-                new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-            with e2:
-                new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                new_c = st.text_input("Counter", value=val_counter)
-            with e3:
-                new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=val_sn_ctr)
-            
-            submit_edit = st.form_submit_button("💾 บันทึกการแก้ไข")
-            
-            if submit_edit:
-                df = df.astype(object)
-                df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                df.at[idx, "สาขา"] = new_b
-                df.at[idx, "counter"] = new_c
-                df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                df.at[idx, "สถานะ"] = new_s
-                
-                try:
-                    conn.update(worksheet=selected_sheet, data=df.astype(str))
-                    st.success("อัปเดตเรียบร้อย!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"เกิดข้อผิดพลาดในการอัปเดต: {e}")
-        
-        # --- ปุ่มสำหรับใช้ลบข้อมูลออกอย่างปลอดภัย (แสดงผลถูกต้องแน่นอน) ---
-        st.markdown("---")
-        st.markdown("🛑 **โซนลบข้อมูลออกจากระบบ**")
-        confirm_row_delete = st.checkbox(f"ฉันตรวจสอบดีแล้วและยืนยันว่าต้องการลบข้อมูล Serial: `{sel_sn}` นี้")
-        
-        if st.button("🗑️ ยืนยันการลบรายการนี้", type="primary"):
-            if confirm_row_delete:
-                df = df.drop(idx)
-                try:
-                    conn.update(worksheet=selected_sheet, data=df.astype(str))
-                    st.success("🎉 ลบข้อมูลรายการดังกล่าวออกจากฐานข้อมูลสำเร็จ!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
-            else:
-                st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
+# =====================================================================
+# 🗂️ การตั้งค่าโครงสร้างเมนูแบบ หน้าหลัก -> หน้ารอง (Hierarchical Routing)
+# =====================================================================
 
-# --- 8. ตารางผลลัพธ์ ---
-st.divider()
-view = df.copy()
-if q:
-    mask = view.astype(str).apply(lambda x: x.str.contains(q, case=False, na=False)).any(axis=1)
-    view = view[mask]
+# กำหนดหน้าต่างๆ แปลงเป็น วัตถุหน้าเพจของ Streamlit
+page_claim_main = st.Page(claim_dashboard, title="ระบบงานเคลมอุปกรณ์", icon="📊", default=True)
+page_claim_sub1 = st.Page(claim_system_page, title="└─ บันทึกและติดตามงานเคลม", icon="📑")
 
-st.dataframe(view, use_container_width=True, hide_index=True)
+page_ship_main = st.Page(logistics_dashboard, title="ระบบงานจัดส่งพัสดุ", icon="🚚")
+page_ship_sub1 = st.Page(shipping_label_page, title="└─ ที่อยู่ศูนย์ฯ & ใบปะหน้า", icon="📦")
+
+# มัดรวมกิ่งก้านหน้าเพจเข้าด้วยกันตามแบบฉบับที่คุณต้องการในรูปภาพ
+pg = st.navigation({
+    "Claim Management": [page_claim_main, page_claim_sub1],
+    "Logistics Management": [page_ship_main, page_ship_sub1]
+})
+
+# สั่งทำงานระบบโครงสร้างเมนูแบบแตกกิ่งก้าน
+pg.run()
