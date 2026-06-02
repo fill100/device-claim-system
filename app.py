@@ -3,20 +3,35 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta, date
 
-# --- ตั้งค่าหน้ากระดาษหลัก ---
+# --- อิมพอร์ตฟังก์ชันจากไฟล์ย่อยระบบใหม่ เพื่อป้องกันปัญหาตัวแปรสูญหาย ---
+try:
+    from Wesgan import show_asset_system
+except Exception as e:
+    def show_asset_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้เนื่องจากโครงสร้างไฟล์ Wesgan.py ไม่ถูกต้อง: {e}")
+
+try:
+    from Transfer import show_transfer_system
+except Exception as e:
+    def show_transfer_system(conn): st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้เนื่องจากโครงสร้างไฟล์ Transfer.py ไม่ถูกต้อง: {e}")
+
+
+# --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
-# --- สไตล์ปรับแต่งหน้าตา UI ดั้งเดิมของคุณ ---
+# --- ปรับปรุงหน้าตา UI ---
 st.markdown("""
     <style>
+    /* บังคับสีตัวหนังสือในหน้าหลักทั้งหมดให้สว่างชัดเจน */
     html, body, [class*="css"], .stMarkdown, p, span, label {
         color: #ffffff; 
     }
-    /* ซ่อนเมนูอัตโนมัติของ Streamlit */
+    
+    /* ซ่อนระบบเมนูนำทางเดิมของ Streamlit ทั้งหมดแบบเด็ดขาด */
     [data-testid="stSidebarNav"] {display: none !important;}
     [data-testid="stSidebarNavItems"] {display: none !important;}
     div[data-testid="stSidebarUserActions"] {display: none !important;}
     
+    /* ปรับแต่ง Metric Card ให้ตัวเลขและหัวข้อเป็นสีดำเข้มอ่านง่าย */
     .metric-container {
         display: flex;
         justify-content: space-between;
@@ -47,18 +62,18 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (State Control) ---
+# --- ระบบจัดเก็บสถานะหน้าปัจจุบัน (Single-page Routing) ---
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Device Claim"
 
-# --- 1. เชื่อมต่อฐานข้อมูลหลัก ---
+# --- 1. เชื่อมต่อฐานข้อมูล ---
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
 except Exception as e:
     st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
     st.stop()
 
-# --- 2. ข้อมูลตั้งต้นระบบคลังชีต ---
+# --- 2. ข้อมูลตั้งต้นสำหรับหน้า Device Claim ---
 INITIAL_SHEETS = [
     "Signature pad", "Passpost", "Iris Scaner", "Printer Thermal (ปริ้นคิว)",
     "Printer Pantum", "Honeywell g1950", "Newland HR2000", "UPS ประจำศูนย์",
@@ -102,7 +117,7 @@ def handle_export_all():
         except: continue
     return pd.concat(all_data, ignore_index=True) if all_data else None
 
-# --- 3. Sidebar (ปุ่มควบคุมนำทางเปลี่ยนหน้า) ---
+# --- 3. Sidebar (ส่วนควบคุมหลัก) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
@@ -118,7 +133,7 @@ with st.sidebar:
         st.session_state.current_page = "Transfer"
         st.rerun()
     
-    # 🌟 [แก้กลุ่มย่อหน้าตรงส่วนนี้แล้ว] ซ่อนเมนูตั้งค่าอัตโนมัติเมื่อย้ายหน้า
+    # 🌟 [แก้ไขส่วนที่ 2] ตรวจสอบเงื่อนไข: เมนูตั้งค่าเหล่านี้จะยอมให้แสดงผล "เฉพาะตอนอยู่หน้า Device Claim" เท่านั้น
     if st.session_state.current_page == "Device Claim":
         st.divider()
         st.title("🛠️ ตั้งค่าและรายงาน")
@@ -152,47 +167,19 @@ with st.sidebar:
                 st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
 
 
-# --- 4. การประมวลผลหน้าเพจย่อยผ่านระบบ exec ดั้งเดิมของคุณ ---
+# --- 4. 🔗 การเรนเดอร์เนื้อหาหน้าจอหลัก (เลข 1) ---
 
-# 🛑 หน้าย่อยที่ 1: ASSET SYSTEM
+# 🛑 แสดงผลหน้า: ASSET SYSTEM
 if st.session_state.current_page == "Asset System":
-    try:
-        with open("pages/Wesgan.py", encoding="utf-8") as f:
-            code = f.read()
-            code = code.replace("st.set_page_config", "# st.set_page_config")
-            code = code.replace("st.page_link", "# st.page_link")
-            exec(code)
-    except FileNotFoundError:
-        try:
-            with open("Wesgan.py", encoding="utf-8") as f:
-                code = f.read()
-                code = code.replace("st.set_page_config", "# st.set_page_config")
-                code = code.replace("st.page_link", "# st.page_link")
-                exec(code)
-        except FileNotFoundError:
-            st.error("⚠️ ไม่พบไฟล์ Wesgan.py ในระบบ")
+    show_asset_system(conn)
     st.stop()
 
-# 🛑 หน้าย่อยที่ 2: โอนย้ายของ
+# 🛑 แสดงผลหน้า: โอนย้ายของ
 elif st.session_state.current_page == "Transfer":
-    try:
-        with open("pages/Transfer.py", encoding="utf-8") as f:
-            code = f.read()
-            code = code.replace("st.set_page_config", "# st.set_page_config")
-            code = code.replace("st.page_link", "# st.page_link")
-            exec(code)
-    except FileNotFoundError:
-        try:
-            with open("Transfer.py", encoding="utf-8") as f:
-                code = f.read()
-                code = code.replace("st.set_page_config", "# st.set_page_config")
-                code = code.replace("st.page_link", "# st.page_link")
-                exec(code)
-        except FileNotFoundError:
-            st.error("⚠️ ไม่พบไฟล์ Transfer.py ในระบบ")
+    show_transfer_system(conn)
     st.stop()
 
-# 📑 หน้าหลักเริ่มต้น: DEVICE CLAIM 
+# 🛑 แสดงผลหน้า: DEVICE CLAIM (หน้าหลักดั้งเดิม)
 else:
     st.title("📑 Claim Management System")
 
@@ -200,6 +187,7 @@ else:
     with col_ws:
         selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
 
+    # ดึงข้อมูลจาก Google Sheets
     has_trackmo_col = False
     try:
         df = conn.read(worksheet=selected_sheet, ttl="0")
@@ -220,6 +208,7 @@ else:
     with col_search:
         q = st.text_input("🔍 ค้นหาข้อมูล:", placeholder="Serial, สาขา, สถานะ...", key="main_search")
 
+    # --- 5. Dashboard Metrics ---
     status_col = df["สถานะ"].str.strip().str.lower()
     inprogress = len(df[status_col == "inprogress"])
     done = len(df[status_col == "done"])
@@ -241,7 +230,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-    # ฟอร์มเพิ่มรายการเคลมใหม่
+    # --- 6. ส่วนฟอร์มเพิ่มข้อมูลใหม่ ---
     with st.expander("➕ เพิ่มรายการเคลมใหม่ (Add New Claim)", expanded=False):
         with st.form("add_new_claim_form"):
             st.selectbox("ประเภทอุปกรณ์", st.session_state.available_sheets, index=st.session_state.available_sheets.index(selected_sheet) if selected_sheet in st.session_state.available_sheets else 0, disabled=True)
@@ -285,7 +274,7 @@ else:
                 else:
                     st.warning("⚠️ โปรดระบุ 'Serial เครื่องที่เสีย' ก่อนกดบันทึก")
 
-    # ส่วน Bulk Insert
+    # --- ส่วนเพิ่มข้อมูลแบบพร้อมกันหลายรายการ (Bulk Insert) ---
     with st.expander("📝 เพิ่มรายการแจ้งซ่อมแบบหลายรายการ (Bulk Insert จาก Excel)"):
         if "editor_version" not in st.session_state:
             st.session_state.editor_version = 0
@@ -344,7 +333,7 @@ else:
                 except Exception as e:
                     st.error(f"❌ ไม่สามารถบันทึกได้เนื่องจากข้อผิดพลาด: {e}")
 
-    # ส่วนแก้ไข ข้อมูลรายการ
+    # --- 7. ส่วนแก้ไข หรือ ลบรายการ ---
     if not df.empty:
         with st.expander("📝 แก้ไข หรือ ลบรายการ"):
             sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
@@ -392,7 +381,7 @@ else:
                     
                     save_df = df.copy()
                     if has_trackmo_col and "สถานะ" in save_df.columns:
-                        save_df = save_df.rename(columns={"軟態": "แก้ในTrackMo"})
+                        save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
                     
                     try:
                         conn.update(worksheet=selected_sheet, data=save_df.astype(str))
@@ -418,9 +407,9 @@ else:
                     except Exception as e:
                         st.error(f"ไม่สามารถลบข้อมูลได้เนื่องจาก: {e}")
                 else:
-                    st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้ว...' ก่อนกดปุ่มลบ")
+                    st.warning("⚠️ โปรดคลิกเลือกที่ช่อง 'ฉันตรวจสอบดีแล้วและยืนยัน...' ก่อนกดปุ่มลบ")
 
-    # ตารางแสดงผล
+    # --- 8. ตารางผลลัพธ์ ---
     st.divider()
     view = df.copy()
     if q:
