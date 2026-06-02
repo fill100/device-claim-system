@@ -9,12 +9,41 @@ st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 # --- สไตล์ปรับแต่งหน้าตา UI ดั้งเดิมของคุณ ---
 st.markdown("""
     <style>
-    [data-testid="stSidebar"] { display: none !important; }
-    html, body, .stApp { color: #ffffff; }
-    .metric-container { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
-    .metric-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid #444444; background-color: #262730; }
-    .metric-value { font-size: 30px; font-weight: 900; color: #ffffff; }
-    .metric-label { font-size: 16px; font-weight: bold; color: #cccccc; }
+    html, body, [class*="css"], .stMarkdown, p, span, label {
+        color: #ffffff; 
+    }
+    /* ซ่อนเมนูอัตโนมัติของ Streamlit */
+    [data-testid="stSidebarNav"] {display: none !important;}
+    [data-testid="stSidebarNavItems"] {display: none !important;}
+    div[data-testid="stSidebarUserActions"] {display: none !important;}
+    
+    .metric-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .metric-card {
+        flex: 1;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid #444444;
+    }
+    .metric-container .metric-card .metric-value {
+        font-size: 36px;
+        font-weight: 900; 
+        display: block;
+        color: #000000 !important; 
+    }
+    .metric-container .metric-card .metric-label {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 5px;
+        display: block;
+        color: #000000 !important; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -128,32 +157,39 @@ with st.sidebar:
 # 🛑 หน้าย่อยที่ 1: ASSET SYSTEM
 if st.session_state.current_page == "Asset System":
     try:
-        # ย้ายไฟล์ออกมาไว้ที่ Root (ไม่ต้องมี pages/)
-        with open("Wesgan.py", encoding="utf-8") as f:
+        with open("pages/Wesgan.py", encoding="utf-8") as f:
             code = f.read()
-            # ตัดคำสั่งที่อาจทำให้พังออก
             code = code.replace("st.set_page_config", "# st.set_page_config")
             code = code.replace("st.page_link", "# st.page_link")
-            # --- เติมบรรทัดนี้เพื่อซ่อน Sidebar ทันทีที่โหลดไฟล์นี้ ---
-            st.markdown("""<style>[data-testid="stSidebar"] {display: none !important;}</style>""", unsafe_allow_html=True)
             exec(code)
     except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Wesgan.py ในระบบ (ตรวจสอบว่าย้ายไฟล์ออกจากโฟลเดอร์ pages แล้ว)")
+        try:
+            with open("Wesgan.py", encoding="utf-8") as f:
+                code = f.read()
+                code = code.replace("st.set_page_config", "# st.set_page_config")
+                code = code.replace("st.page_link", "# st.page_link")
+                exec(code)
+        except FileNotFoundError:
+            st.error("⚠️ ไม่พบไฟล์ Wesgan.py ในระบบ")
     st.stop()
 
 # 🛑 หน้าย่อยที่ 2: โอนย้ายของ
 elif st.session_state.current_page == "Transfer":
     try:
-        # ย้ายไฟล์ออกมาไว้ที่ Root (ไม่ต้องมี pages/)
-        with open("Transfer.py", encoding="utf-8") as f:
+        with open("pages/Transfer.py", encoding="utf-8") as f:
             code = f.read()
             code = code.replace("st.set_page_config", "# st.set_page_config")
             code = code.replace("st.page_link", "# st.page_link")
-            # --- เติมบรรทัดนี้เพื่อซ่อน Sidebar ทันทีที่โหลดไฟล์นี้ ---
-            st.markdown("""<style>[data-testid="stSidebar"] {display: none !important;}</style>""", unsafe_allow_html=True)
             exec(code)
     except FileNotFoundError:
-        st.error("⚠️ ไม่พบไฟล์ Transfer.py ในระบบ (ตรวจสอบว่าย้ายไฟล์ออกจากโฟลเดอร์ pages แล้ว)")
+        try:
+            with open("Transfer.py", encoding="utf-8") as f:
+                code = f.read()
+                code = code.replace("st.set_page_config", "# st.set_page_config")
+                code = code.replace("st.page_link", "# st.page_link")
+                exec(code)
+        except FileNotFoundError:
+            st.error("⚠️ ไม่พบไฟล์ Transfer.py ในระบบ")
     st.stop()
 
 # 📑 หน้าหลักเริ่มต้น: DEVICE CLAIM 
