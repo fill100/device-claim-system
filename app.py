@@ -10,56 +10,52 @@ st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Device Claim"
 
-# --- สไตล์ปรับแต่งหน้าตา UI (แก้ไขแก้ปัญหาสีขาวกลืนหน้าย่อยแล้ว) ---
+# --- สไตล์ปรับแต่งหน้าตา UI (แก้ไขให้ Sidebar แสดงผลทุกหน้า) ---
+st.markdown("""
+    <style>
+    /* ซ่อนเฉพาะเมนูอัตโนมัติดั้งเดิมของ Streamlit เพื่อใช้ปุ่ม Sidebar ที่เราสร้างเอง */
+    [data-testid="stSidebarNav"] {display: none !important;}
+    [data-testid="stSidebarNavItems"] {display: none !important;}
+    div[data-testid="stSidebarUserActions"] {display: none !important;}
+    
+    /* สไตล์สำหรับกล่องเมตริกในหน้า Device Claim */
+    .metric-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .metric-card {
+        flex: 1;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        border: 2px solid #444444;
+    }
+    .metric-container .metric-card .metric-value {
+        font-size: 36px;
+        font-weight: 900; 
+        display: block;
+        color: #000000 !important; 
+    }
+    .metric-container .metric-card .metric-label {
+        font-size: 18px;
+        font-weight: bold;
+        margin-top: 5px;
+        display: block;
+        color: #000000 !important; 
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# เฉพาะกรณีหน้า Device Claim ให้สีข้อความเป็นสีขาวตามธีมเดิม
 if st.session_state.current_page == "Device Claim":
     st.markdown("""
         <style>
-        /* บังคับสีข้อความหน้าหลักให้อ่านง่าย */
         html, body, .stApp {
             color: #ffffff; 
         }
-        
-        /* ซ่อนเมนูอัตโนมัติของ Streamlit */
-        [data-testid="stSidebarNav"] {display: none !important;}
-        [data-testid="stSidebarNavItems"] {display: none !important;}
-        div[data-testid="stSidebarUserActions"] {display: none !important;}
-        
-        .metric-container {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .metric-card {
-            flex: 1;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            border: 2px solid #444444;
-        }
-        .metric-container .metric-card .metric-value {
-            font-size: 36px;
-            font-weight: 900; 
-            display: block;
-            color: #000000 !important; 
-        }
-        .metric-container .metric-card .metric-label {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 5px;
-            display: block;
-            color: #000000 !important; 
-        }
-        </style>
-        """, unsafe_allow_html=True)
-else:
-    # สำหรับหน้าย่อยอื่น ปล่อยให้ซ่อนเมนู Sidebar อย่างเดียว ไม่ให้สีขาวไปทับ
-    st.markdown("""
-        <style>
-        [data-testid="stSidebarNav"] {display: none !important;}
-        [data-testid="stSidebarNavItems"] {display: none !important;}
-        div[data-testid="stSidebarUserActions"] {display: none !important;}
         </style>
         """, unsafe_allow_html=True)
 
