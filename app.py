@@ -104,18 +104,8 @@ def handle_export_all():
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # 🛠️ ปรับแก้จุดนี้เพื่อลบปัญหา KeyError ถาวร:
-    # หากระบบบนคลาวด์เรียกหา "app.py" ตรงๆ แล้วไม่เจอ มันจะทำการสลับไปเรียกโครงสร้างจุดปัจจุบัน "./app.py" 
-    # หรือถอยไปใช้ลิงก์สไตล์เปิดหน้าหลักแทนโดยอัตโนมัติ ทำให้เว็บใช้งานต่อได้ทันทีไม่ล่ม
-    try:
-        st.page_link("./app.py", label="Device Claim", icon="📑")
-    except Exception:
-        try:
-            st.page_link("app.py", label="Device Claim", icon="📑")
-        except Exception:
-            # แผนสำรองสุดท้าย: ใช้ HTML ลิงก์ตรงเข้าสู่ Root หน้าเว็บเพื่อรีเฟรชเข้าสู่หน้าแรกปลอดภัยสุด
-            st.markdown('<a href="/" target="_self" style="text-decoration:none; color:white;">📑 Device Claim</a>', unsafe_allow_html=True)
-        
+    # ใช้ HTML ลิงก์สไตล์เปิดหน้าหลักแทนการใส่ชื่อไฟล์ เพื่อความเสถียรสูงสุดบนเซิร์ฟเวอร์คลาวด์
+    st.markdown('<a href="/" target="_self" style="text-decoration:none; color:white; font-size:16px; font-weight:bold;">📑 Device Claim</a>', unsafe_allow_html=True)
     st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
     st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
     
@@ -233,7 +223,7 @@ with st.expander("➕ เพิ่มรายการเคลมใหม่ 
                 
                 save_df = df.copy()
                 if has_trackmo_col and "สถานะ" in save_df.columns:
-                    save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
+                    save_df = save_df.rename(columns={"text": "แก้ในTrackMo"})
                 
                 try:
                     conn.update(worksheet=selected_sheet, data=save_df)
@@ -350,7 +340,8 @@ if not df.empty:
                 df.at[idx, "สถานะ"] = new_s
                 
                 save_df = df.copy()
-                if has_trackmo_col watch and "สถานะ" in save_df.columns:
+                # 🛠️ แก้ไขเรียบร้อย: ลบคำว่า watch ที่ติดมาเกินออกแล้ว
+                if has_trackmo_col and "สถานะ" in save_df.columns:
                     save_df = save_df.rename(columns={"สถานะ": "แก้ในTrackMo"})
                 
                 try:
