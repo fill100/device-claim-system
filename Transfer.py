@@ -1,7 +1,7 @@
 import streamlit as st
 # โค้ดสำหรับซ่อนเมนูอัตโนมัติของ Streamlit
 import streamlit as st
-st.markdown("### ระบบจัดการทรัพย์สิน (Asset System)")
+st.markdown("### ระบบโอนย้ายอุปกรณ์ (Transfer System)")
 
 # ... โค้ดดึงข้อมูลตาราง/ฟอร์มเดิมของคุณ ...
 import pandas as pd
