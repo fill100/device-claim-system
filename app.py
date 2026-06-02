@@ -46,6 +46,24 @@ st.markdown("""
         display: block;
         color: #000000 !important; 
     }
+    
+    /* ตกแต่งปุ่มลิงก์สไตล์ Sidebar */
+    .sidebar-link {
+        display: block;
+        padding: 10px 15px;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        font-size: 16px;
+    }
+    .sidebar-link:hover {
+        background-color: rgba(255,255,255,0.1);
+    }
+    .sidebar-active {
+        background-color: rgba(255,255,255,0.15);
+        font-weight: bold;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -104,19 +122,11 @@ def handle_export_all():
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
-    # ป้องกันบั๊ก KeyError ด้วยการใช้กลไกหาหน้าหลักที่ปลอดภัยของเซิร์ฟเวอร์
-    try:
-        from streamlit.runtime.pages_manager import get_pages_manager
-        pages_manager = get_pages_manager()
-        main_page_key = next(iter(pages_manager.get_pages().keys()))
-        main_page_info = pages_manager.get_pages()[main_page_key]
-        st.page_link(main_page_info["script_path"], label="Device Claim", icon="📑")
-    except Exception:
-        # แผนสำรองกรณีหน้าหลักถูกเปลี่ยนชื่อใน Github
-        st.page_link("app.py", label="Device Claim", icon="📑")
-        
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+    # 🛠️ ปรับโฉมเมนูนำทางใหม่ ลบ st.page_link ยุ่งยากออกทั้งหมด เพื่อไม่ให้เกิด KeyError / PageNotFoundError อีก
+    st.markdown('<a href="/" target="_self" class="sidebar-link sidebar-active">📑 Device Claim</a>', unsafe_allow_html=True)
+    st.markdown('<a href="/Wesgan" target="_self" class="sidebar-link">🛡️ Asset System</a>', unsafe_allow_html=True)
+    st.markdown('<a href="/Transfer" target="_self" class="sidebar-link">✈️ โอนย้ายของ</a>', unsafe_allow_html=True)
+    
     st.divider()
     st.title("🛠️ ตั้งค่าและรายงาน")
     
@@ -126,7 +136,6 @@ with st.sidebar:
             if new_device and new_device not in st.session_state.available_sheets:
                 try:
                     new_df = pd.DataFrame(columns=EXPECTED_COLUMNS)
-                    # แก้ไขบั๊กจุดนี้: เปลี่ยนจาก conn.create เป็น conn.update เพื่อให้รองรับคำสั่งของ gsheets ไลบรารี
                     conn.update(worksheet=new_device, data=new_df)
                     st.session_state.available_sheets.append(new_device)
                     st.success(f"สร้างหน้า {new_device} สำเร็จ")
@@ -274,7 +283,6 @@ if not df.empty:
         val_counter = "" if str(row["counter"]).lower() == "nan" else str(row["counter"])
         val_sn_ctr = "" if str(row["Serial เครื่องที่ส่งให้ศูนย์"]).lower() == "nan" else str(row["Serial เครื่องที่ส่งให้ศูนย์"])
 
-        # แก้ไขจุดเสี่ยงล่ม: ประมวลผลวันที่อย่างปลอดภัยและป้องกัน Exception ค่าว่าง
         try:
             date_str = str(row["วันทีนำไปติดตั้งใหม่"]).strip()
             if date_str and date_str.lower() != "nan" and date_str != "":
@@ -284,6 +292,7 @@ if not df.empty:
         except Exception:
             curr_d_ins = date.today()
 
+        # แก้ไขปัญหา Missing Submit Button โดยผูก st.form_submit_button ไว้ในฟอร์มอย่างเคร่งครัด
         with st.form("edit_full_form"):
             e1, e2, e3 = st.columns(3)
             with e1:
