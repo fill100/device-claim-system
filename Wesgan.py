@@ -37,7 +37,7 @@ def run_asset_page():
     st.title("🛡️ Asset Management")
     
     all_models = ["ทั้งหมด"] + sorted(df["Model Name (ชื่อรุ่น)"].unique().tolist())
-    filter_model = st.selectbox("🎯 เลือกดูเฉพาะรุ่น (ตัวกรอง Model):", all_models, key="asset_filter_model_selectbox")
+    filter_model = st.selectbox("🎯 เลือกดูเฉพาะรุ่น (ตัวกรอง Model):", all_models, key="asset_filter_model_sp")
 
     view_df = df.copy()
     if filter_model != "ทั้งหมด":
@@ -47,15 +47,15 @@ def run_asset_page():
     expander_label = "📝 แก้ไขข้อมูลทรัพย์สิน" if is_editing else "➕ ลงทะเบียนทรัพย์สินใหม่"
 
     with st.expander(expander_label, expanded=is_editing):
-        with st.form("asset_form_nested", clear_on_submit=True):
+        with st.form("asset_form_sp", clear_on_submit=True):
             current_val = st.session_state.edit_data if is_editing else {}
             
             col1, col2 = st.columns(2)
             with col1:
-                input_sn = st.text_input("Serial Number", value=current_val.get("Serial Number (เลขซีเรียล)", ""), key="asset_in_sn")
-                input_model = st.text_input("Model Name", value=current_val.get("Model Name (ชื่อรุ่น)", ""), key="asset_in_model")
+                input_sn = st.text_input("Serial Number", value=current_val.get("Serial Number (เลขซีเรียล)", ""), key="asset_in_sn_sp")
+                input_model = st.text_input("Model Name", value=current_val.get("Model Name (ชื่อรุ่น)", ""), key="asset_in_model_sp")
             with col2:
-                input_loc = st.text_input("Location", value=current_val.get("Location (สถานที่)", ""), key="asset_in_loc")
+                input_loc = st.text_input("Location", value=current_val.get("Location (สถานที่)", ""), key="asset_in_loc_sp")
                 
                 try:
                     if is_editing and current_val.get("วันที่ซื้อ"):
@@ -65,7 +65,7 @@ def run_asset_page():
                 except:
                     default_date = datetime.now()
                 
-                input_date = st.date_input("วันที่ซื้อ", value=default_date, format="DD/MM/YYYY", key="asset_in_date")
+                input_date = st.date_input("วันที่ซื้อ", value=default_date, format="DD/MM/YYYY", key="asset_in_date_sp")
             
             b_col1, b_col2 = st.columns([1, 5])
             with b_col1:
@@ -107,7 +107,7 @@ def run_asset_page():
     c1, c2 = st.columns([3, 1])
 
     with c1:
-        search_term = st.text_input("🔍 ค้นหาในตาราง (S/N, รุ่น, สถานที่):", key="asset_table_search")
+        search_term = st.text_input("🔍 ค้นหาในตาราง (S/N, รุ่น, สถานที่):", key="asset_table_search_sp")
         if search_term:
             mask = view_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)
             view_df = view_df[mask]
@@ -121,7 +121,7 @@ def run_asset_page():
             file_name=f"Asset_Report_{datetime.now().strftime('%Y%m%d')}.csv",
             mime="text/csv",
             use_container_width=True,
-            key="asset_csv_download_btn"
+            key="asset_csv_download_btn_sp"
         )
 
     st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ (คลิกที่ช่องสถานที่เพื่อแก้ไขได้ทันที)")
@@ -136,10 +136,10 @@ def run_asset_page():
             "วันที่ซื้อ": st.column_config.TextColumn(disabled=True),
             "Location (สถานที่)": st.column_config.TextColumn(disabled=False)
         },
-        key="bulk_edit_location_nested"
+        key="bulk_edit_location_sp"
     )
 
-    if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง", key="btn_confirm_asset_loc_change"):
+    if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง", key="btn_confirm_asset_loc_change_sp"):
         try:
             df.update(edited_view_df)
             conn.update(worksheet="Asset Management", data=df.astype(str))
