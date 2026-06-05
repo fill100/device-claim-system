@@ -1,149 +1,150 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
-from datetime import datetime
-import io
+from datetime import datetime, timedelta
+from fpdf import FPDF
+import os
 
-def run_asset_page():
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-    except Exception as e:
-        st.error("⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูลหลักได้")
-        return
+def run_transfer_page():
+    # --- 1. ฟังก์ชันสร้าง PDF ---
+    def create_transfer_pdf(data):
+        pdf = FPDF()
+        pdf.add_page()
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
+        font_path = os.path.join(current_dir, "THSarabunNew.ttf")
 
-    ASSET_COLUMNS = ["Serial Number (เลขซีเรียล)", "Model Name (ชื่อรุ่น)", "Location (สถานที่)", "วันที่ซื้อ"]
+        if os.path.exists(logo_path):
+            pdf.image(logo_path, x=10, y=10, w=45)
+        
+        if os.path.exists(font_path):
+            pdf.add_font('THSarabun', '', font_path)
+            pdf.add_font('THSarabun', 'B', font_path)
+            pdf.set_font('THSarabun', 'B', 14)
+        
+        pdf.set_y(12) 
+        pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "R")
+        pdf.set_font('THSarabun', '', 11)
+        pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
+        pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
+        
+        pdf.set_draw_color(80, 80, 80)
+        pdf.set_line_width(0.6)
+        pdf.line(10, 35, 200, 35) 
+        
+        pdf.ln(12)
+        pdf.set_font('THSarabun', 'B', 18)
+        pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน", 0, 1, "C")
+        
+        pdf.set_font('THSarabun', '', 14)
+        pdf.cell(0, 8, f"วันที่ดำเนินการ: {data['date']}", 0, 1, "R")
+        pdf.cell(0, 8, f"สถานที่ปลายทาง: {data['to_loc']}", 0, 1, "L")
+        pdf.ln(2)
 
-    try:
-        df = conn.read(worksheet="Asset Management", ttl="0")
-        if df is not None and not df.empty:
-            df.columns = df.columns.str.strip()
-            for col in ASSET_COLUMNS:
-                if col not in df.columns: df[col] = ""
-            df = df[ASSET_COLUMNS]
+        pdf.set_font('THSarabun', 'B', 14)
+        pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
+        pdf.set_line_width(0.2)
+        pdf.set_font('THSarabun', '', 14)
+        
+        types_list = ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"]
+        x_pos = [15, 55, 95, 135]
+        
+        for i, t_name in enumerate(types_list):
+            pdf.rect(x_pos[i], pdf.get_y()+2, 4, 4)
+            if data['transfer_type'] == t_name:
+                pdf.set_font('Arial', 'B', 10)
+                pdf.text(x_pos[i]+0.8, pdf.get_y()+5.2, "X")
+                pdf.set_font('THSarabun', '', 14)
+            
+            pdf.set_x(x_pos[i]+7)
+            display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
+            pdf.cell(40, 8, display_name, 0, 0)
+        pdf.ln(10)
+
+        pdf.set_font('THSarabun', 'B', 14)
+        pdf.set_fill_color(240, 240, 240)
+        w_no, w_asset, w_note = 15, 80, 95
+        h_cell = 10
+
+        pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
+        pdf.cell(w_asset, h_cell, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
+        pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
+
+        pdf.set_font('THSarabun', '', 14)
+        for i, row in enumerate(data['items'], 1):
+            asset_val = str(row.get("เลขทรัพย์สิน/ชื่อรายการ", ""))
+            note_val = str(row.get("หมายเหตุ", ""))
+            pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
+            pdf.cell(w_asset, h_cell, f" {asset_val}", 1, 0, "L")
+            pdf.cell(w_note, h_cell, f" {note_val}", 1, 1, "L")
+        
+        pdf.ln(7)
+        pdf.set_font('THSarabun', 'B', 11)
+        pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
+
+        pdf.ln(5)
+        w_sign = 63.3
+        pdf.set_font('THSarabun', 'B', 11)
+        pdf.cell(w_sign, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
+        pdf.cell(w_sign, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
+        pdf.cell(w_sign, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
+        pdf.ln(10)
+        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+        pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
+        pdf.set_font('THSarabun', '', 10)
+        pdf.cell(w_sign, 5, f"( {data['s_old']} )", 0, 0, "C")
+        pdf.cell(w_sign, 5, f"( {data['s_new']} )", 0, 0, "C")
+        pdf.cell(w_sign, 5, f"( {data['it_staff']} )", 0, 1, "C")
+        pdf.ln(8)
+        pdf.set_font('THSarabun', 'B', 11)
+        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
+        pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
+        pdf.set_font('THSarabun', '', 10)
+        pdf.cell(w_sign, 5, "( หัวหน้าต้นทาง )", 0, 0, "C")
+        pdf.cell(w_sign, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
+        pdf.cell(w_sign, 5, "( หัวหน้าฝ่าย IT )", 0, 1, "C")
+
+        return pdf.output()
+
+    # --- ส่วน UI หน้าจอหลัก ---
+    st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
+
+    if "df_data" not in st.session_state:
+        st.session_state.df_data = pd.DataFrame([{"เลขทรัพย์สิน/ชื่อรายการ": "", "หมายเหตุ": ""}])
+
+    with st.container(border=True):
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True, key="transfer_radio_sp_fixed")
+            st.write("---")
+            st.write("**รายการทรัพย์สิน**")
+            edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_editor_sp_fixed")
+        with col2:
+            st.write("**ข้อมูลผู้ดำเนินการ**")
+            to_location = st.text_input("สถานที่ปลายทาง", key="transfer_to_loc_sp_fixed")
+            s_old = st.text_input("ชื่อผู้ถือครองเดิม", key="transfer_s_old_sp_fixed")
+            s_new = st.text_input("ชื่อผู้ถือครองใหม่", key="transfer_s_new_sp_fixed")
+            it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)", key="transfer_it_staff_sp_fixed")
+
+    if st.button("🚀 Generate PDF", key="btn_generate_pdf_sp_fixed"):
+        clean_items = edited_df[edited_df["เลขทรัพย์สิน/ชื่อรายการ"].str.strip() != ""].to_dict('records')
+        if not clean_items or not to_location:
+            st.error("⚠️ กรุณากรอกรายการและสถานที่ปลายทาง")
         else:
-            df = pd.DataFrame(columns=ASSET_COLUMNS)
-    except:
-        df = pd.DataFrame(columns=ASSET_COLUMNS)
-
-    if "edit_data" not in st.session_state:
-        st.session_state.edit_data = None
-    if "row_index" not in st.session_state:
-        st.session_state.row_index = None
-
-    def reset_edit_state():
-        st.session_state.edit_data = None
-        st.session_state.row_index = None
-
-    st.title("🛡️ Asset Management")
-    
-    all_models = ["ทั้งหมด"] + sorted(df["Model Name (ชื่อรุ่น)"].unique().tolist())
-    filter_model = st.selectbox("🎯 เลือกดูเฉพาะรุ่น (ตัวกรอง Model):", all_models, key="asset_filter_model_sp")
-
-    view_df = df.copy()
-    if filter_model != "ทั้งหมด":
-        view_df = view_df[view_df["Model Name (ชื่อรุ่น)"] == filter_model]
-
-    is_editing = st.session_state.edit_data is not None
-    expander_label = "📝 แก้ไขข้อมูลทรัพย์สิน" if is_editing else "➕ ลงทะเบียนทรัพย์สินใหม่"
-
-    with st.expander(expander_label, expanded=is_editing):
-        with st.form("asset_form_sp", clear_on_submit=True):
-            current_val = st.session_state.edit_data if is_editing else {}
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                input_sn = st.text_input("Serial Number", value=current_val.get("Serial Number (เลขซีเรียล)", ""), key="asset_in_sn_sp")
-                input_model = st.text_input("Model Name", value=current_val.get("Model Name (ชื่อรุ่น)", ""), key="asset_in_model_sp")
-            with col2:
-                input_loc = st.text_input("Location", value=current_val.get("Location (สถานที่)", ""), key="asset_in_loc_sp")
-                
-                try:
-                    if is_editing and current_val.get("วันที่ซื้อ"):
-                        default_date = datetime.strptime(current_val.get("วันที่ซื้อ"), "%d-%m-%Y")
-                    else:
-                        default_date = datetime.now()
-                except:
-                    default_date = datetime.now()
-                
-                input_date = st.date_input("วันที่ซื้อ", value=default_date, format="DD/MM/YYYY", key="asset_in_date_sp")
-            
-            b_col1, b_col2 = st.columns([1, 5])
-            with b_col1:
-                submit = st.form_submit_button("💾 บันทึก")
-            with b_col2:
-                if is_editing:
-                    if st.form_submit_button("❌ ยกเลิกการแก้ไข"):
-                        reset_edit_state()
-                        st.rerun()
-
-            if submit:
-                if input_sn:
-                    updated_row_data = {
-                        "Serial Number (เลขซีเรียล)": str(input_sn),
-                        "Model Name (ชื่อรุ่น)": str(input_model),
-                        "Location (สถานที่)": str(input_loc),
-                        "วันที่ซื้อ": input_date.strftime("%d-%m-%Y"),
-                    }
-                    
-                    try:
-                        if is_editing:
-                            df.iloc[st.session_state.row_index] = updated_row_data
-                            success_msg = "อัปเดตข้อมูลเรียบร้อยแล้ว!"
-                        else:
-                            new_row_df = pd.DataFrame([updated_row_data])
-                            df = pd.concat([df, new_row_df], ignore_index=True)
-                            success_msg = "ลงทะเบียนใหม่เรียบร้อยแล้ว!"
-                        
-                        conn.update(worksheet="Asset Management", data=df.astype(str))
-                        st.success(success_msg)
-                        reset_edit_state()
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาด: {e}")
-                else:
-                    st.error("กรุณาระบุ Serial Number")
-
-    st.divider()
-    c1, c2 = st.columns([3, 1])
-
-    with c1:
-        search_term = st.text_input("🔍 ค้นหาในตาราง (S/N, รุ่น, สถานที่):", key="asset_table_search_sp")
-        if search_term:
-            mask = view_df.astype(str).apply(lambda x: x.str.contains(search_term, case=False)).any(axis=1)
-            view_df = view_df[mask]
-
-    with c2:
-        st.write("📊 Report")
-        csv_data = view_df.to_csv(index=False).encode('utf-8-sig')
-        st.download_button(
-            label="📥 Download CSV",
-            data=csv_data,
-            file_name=f"Asset_Report_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-            key="asset_csv_download_btn_sp"
-        )
-
-    st.write(f"พบข้อมูลทั้งหมด: **{len(view_df)}** รายการ (คลิกที่ช่องสถานที่เพื่อแก้ไขได้ทันที)")
-
-    edited_view_df = st.data_editor(
-        view_df,
-        use_container_width=True,
-        hide_index=False,
-        column_config={
-            "Serial Number (เลขซีเรียล)": st.column_config.TextColumn(disabled=True),
-            "Model Name (ชื่อรุ่น)": st.column_config.TextColumn(disabled=True),
-            "วันที่ซื้อ": st.column_config.TextColumn(disabled=True),
-            "Location (สถานที่)": st.column_config.TextColumn(disabled=False)
-        },
-        key="bulk_edit_location_sp"
-    )
-
-    if st.button("✅ ยืนยันการเปลี่ยนสถานที่ในตาราง", key="btn_confirm_asset_loc_change_sp"):
-        try:
-            df.update(edited_view_df)
-            conn.update(worksheet="Asset Management", data=df.astype(str))
-            st.success("บันทึกการเปลี่ยนสถานที่เรียบร้อย!")
-            st.rerun()
-        except Exception as e:
-            st.error(f"ไม่สามารถบันทึกได้: {e}")
+            pdf_data = {
+                "date": (datetime.now() + timedelta(hours=7)).strftime('%d/%m/%Y'),
+                "items": clean_items,
+                "to_loc": to_location,
+                "transfer_type": transfer_type,
+                "s_old": s_old if s_old else "............................",
+                "s_new": s_new if s_new else "............................",
+                "it_staff": it_staff if it_staff else "............................"
+            }
+            try:
+                pdf_out = create_transfer_pdf(pdf_data)
+                st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf", key="download_pdf_btn_sp_fixed")
+                st.success("✅ ครบถ้วนทุกส่วนแล้วครับ!")
+            except Exception as e:
+                st.error(f"Error: {e}")
