@@ -4,27 +4,26 @@ import pandas as pd
 from datetime import datetime, timedelta, date
 import sys # อย่าลืม import sys ไว้ด้านบนสุดของไฟล์ด้วยนะครับ
 
-# แก้ไขการประกาศฟังก์ชันใหม่ให้ถูกต้องตามหลักภาษา Python
-# ใน app.py ส่วนที่เช็คสถานะหน้าจอ
-elif st.session_state.current_page == "Transfer":
+def show_asset_system(conn):
     try:
-        with open("Transfer.py", encoding="utf-8") as f:
+        with open("Wesgan.py", encoding="utf-8") as f:
             code = f.read()
-            namespace = {}
-            exec(code, namespace)
-            # เรียกฟังก์ชันในไฟล์ Transfer.py
-            namespace['run_transfer_page'](conn)
+            ns = {}
+            exec(code, ns)
+            ns['main']() # สมมติว่าใน Wesgan.py มีฟังก์ชันชื่อ main()
     except Exception as e:
-        st.error(f"โหลดหน้า Transfer ไม่สำเร็จ: {e}")
+        st.error(f"⚠️ ไม่สามารถโหลด Asset System: {e}")
 
 def show_transfer_system(conn):
     try:
         with open("Transfer.py", encoding="utf-8") as f:
             code = f.read()
-            exec(code)
-    except Exception as err:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {err}")
-
+            ns = {}
+            exec(code, ns)
+            ns['run_transfer_page'](conn) # เรียกฟังก์ชันจาก Transfer.py
+    except Exception as e:
+        st.error(f"⚠️ ไม่สามารถโหลดระบบโอนย้าย: {e}")
+        
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
 
@@ -180,6 +179,11 @@ with st.sidebar:
 # --- 4. 🔗 การเรนเดอร์เนื้อหาหน้าจอหลัก (เลข 1) ---
 
 # 🛑 เช็คโครงสร้างนี้ในไฟล์ app.py ของคุณ
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Device Claim"
+
+# --- 4. การแสดงผลเนื้อหา (จุดที่คุณวาง elif ผิด) ---
+# ตรงนี้แหละครับที่คุณต้องเอา if-elif-else มาวางไว้ที่เดียว
 if st.session_state.current_page == "Asset System":
     show_asset_system(conn)
     st.stop()
@@ -189,8 +193,9 @@ elif st.session_state.current_page == "Transfer":
     st.stop()
 
 else:
-    # --- หน้าหลัก Device Claim (เอาส่วนที่เคยต่อท้าย else: ออกให้หมด แล้ววางที่นี่) ---
+    # โค้ดหน้าหลัก Device Claim ของคุณทั้งหมดวางในนี้
     st.title("📑 Claim Management System")
+    # ...
 
     col_ws, col_search = st.columns([1, 2])
     with col_ws:
