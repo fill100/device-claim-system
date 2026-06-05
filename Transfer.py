@@ -11,27 +11,20 @@ def create_transfer_pdf(data):
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
-    
-    # 1. ต้องมี uni=True สำหรับภาษาไทย
+    logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
+
+    # ตั้งค่าฟอนต์แบบ Unicode
     if os.path.exists(font_path):
         pdf.add_font('THSarabun', '', font_path, uni=True)
         pdf.add_font('THSarabun', 'B', font_path, uni=True)
         pdf.set_font('THSarabun', 'B', 14)
     else:
-        # ถ้าไม่มีฟอนต์ ให้ใช้ฟอนต์มาตรฐานแทนเพื่อกันโปรแกรมพัง
         pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, "Font not found!", 0, 1, "C")
-    logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
-    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+        pdf.cell(0, 10, "Font THSarabunNew.ttf not found!", 0, 1, "C")
 
-    # --- Header (Logo + Address) ---
+    # --- Header ---
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=10, y=10, w=45)
-    
-    if os.path.exists(font_path):
-        pdf.add_font('THSarabun', '', font_path)
-        pdf.add_font('THSarabun', 'B', font_path)
-        pdf.set_font('THSarabun', 'B', 14)
     
     pdf.set_y(12) 
     pdf.cell(0, 7, "กิจการร่วมค้า ฟิวเจอร์ สกาย (สำนักงานใหญ่)", 0, 1, "R")
@@ -39,10 +32,7 @@ def create_transfer_pdf(data):
     pdf.cell(0, 6, "เลขที่ 554/72, 554/73, 554/74 อาคารสกายไลน์ เซ็นเตอร์ ชั้น 15", 0, 1, "R")
     pdf.cell(0, 6, "ถนนอโศก-ดินแดง แขวงดินแดง เขตดินแดง กรุงเทพมหานคร 10400", 0, 1, "R")
     
-    pdf.set_draw_color(80, 80, 80)
-    pdf.set_line_width(0.6)
     pdf.line(10, 35, 200, 35) 
-    
     pdf.ln(12)
     pdf.set_font('THSarabun', 'B', 18)
     pdf.cell(0, 10, "แบบฟอร์มการส่งมอบและโยกย้ายทรัพย์สิน", 0, 1, "C")
@@ -52,43 +42,39 @@ def create_transfer_pdf(data):
     pdf.cell(0, 8, f"สถานที่ปลายทาง: {data['to_loc']}", 0, 1, "L")
     pdf.ln(2)
 
-    # --- 2. ส่วน Checkbox (ตามภาพ image_3c084e.png) ---
+    # --- Checkbox ---
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
-    pdf.set_line_width(0.2)
-    pdf.set_font('THSarabun', '', 14)
     
     types = ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"]
     x_pos = [15, 55, 95, 135]
     
-for i, t_name in enumerate(types):
+    for i, t_name in enumerate(types):
         pdf.rect(x_pos[i], pdf.get_y()+2, 4, 4)
         if data['transfer_type'] == t_name:
             pdf.set_xy(x_pos[i]+0.5, pdf.get_y()+2)
             pdf.cell(4, 4, "X", 0, 0, "C")
-        
-        pdf.set_x(x_pos[i]+7)
+        pdf.set_xy(x_pos[i]+7, pdf.get_y())
         display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
         pdf.cell(40, 8, display_name, 0, 0)
-        pdf.ln(10)
+    pdf.ln(10)
 
-    # --- 3. ตารางรายการทรัพย์สิน (Manual) ---
-        pdf.set_font('THSarabun', 'B', 14)
-        pdf.set_fill_color(240, 240, 240)
-        w_no, w_asset, w_note = 15, 80, 95
-        h_cell = 10
+    # --- ตาราง ---
+    pdf.set_font('THSarabun', 'B', 14)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(15, 10, "ลำดับ", 1, 0, "C", True)
+    pdf.cell(80, 10, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
+    pdf.cell(95, 10, "หมายเหตุ", 1, 1, "C", True)
 
-        pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
-        pdf.cell(w_asset, h_cell, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
-        pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
-
-        pdf.set_font('THSarabun', '', 14)
-for i, row in enumerate(data['items'], 1):
-        asset_val = str(row.get("เลขทรัพย์สิน/ชื่อรายการ", ""))
-        note_val = str(row.get("หมายเหตุ", ""))
-        pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
-        pdf.cell(w_asset, h_cell, f" {asset_val}", 1, 0, "L")
-        pdf.cell(w_note, h_cell, f" {note_val}", 1, 1, "L")
+    pdf.set_font('THSarabun', '', 14)
+    for i, row in enumerate(data['items'], 1):
+        pdf.cell(15, 10, str(i), 1, 0, "C")
+        pdf.cell(80, 10, f" {row.get('เลขทรัพย์สิน/ชื่อรายการ', '')}", 1, 0, "L")
+        pdf.cell(95, 10, f" {row.get('หมายเหตุ', '')}", 1, 1, "L")
+    
+    # --- Footer & ลายเซ็น ---
+    pdf.ln(10)
+    # ... (ส่วนลายเซ็นเหมือนเดิม แต่ต้องจัด Indent ให้อยู่ระดับเดียวกับคำสั่ง pdf.ln(10) นี้)
     
     # --- 4. Footer & ลายเซ็น (ตามภาพ image_3c108a.png) ---
         pdf.ln(7)
