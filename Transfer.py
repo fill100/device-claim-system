@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 import os
 
-# --- 1. ฟังก์ชันสร้าง PDF ---
+# --- 1. ฟังก์ชันสร้าง PDF (แก้ไขแล้ว) ---
 def create_transfer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
@@ -13,16 +13,16 @@ def create_transfer_pdf(data):
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
 
-    # ตั้งค่าฟอนต์แบบ Unicode
+    # ตั้งค่าฟอนต์ (ต้องมี uni=True สำหรับภาษาไทย)
     if os.path.exists(font_path):
         pdf.add_font('THSarabun', '', font_path, uni=True)
         pdf.add_font('THSarabun', 'B', font_path, uni=True)
         pdf.set_font('THSarabun', 'B', 14)
     else:
         pdf.set_font('Arial', 'B', 14)
-        pdf.cell(0, 10, "Font THSarabunNew.ttf not found!", 0, 1, "C")
+        pdf.cell(0, 10, "Warning: Font not found!", 0, 1, "C")
 
-    # --- Header ---
+    # Header
     if os.path.exists(logo_path):
         pdf.image(logo_path, x=10, y=10, w=45)
     
@@ -42,7 +42,7 @@ def create_transfer_pdf(data):
     pdf.cell(0, 8, f"สถานที่ปลายทาง: {data['to_loc']}", 0, 1, "L")
     pdf.ln(2)
 
-    # --- Checkbox ---
+    # Checkbox
     pdf.set_font('THSarabun', 'B', 14)
     pdf.cell(0, 8, "ประเภทการดำเนินการ:", 0, 1)
     
@@ -59,7 +59,7 @@ def create_transfer_pdf(data):
         pdf.cell(40, 8, display_name, 0, 0)
     pdf.ln(10)
 
-    # --- ตาราง ---
+    # ตาราง
     pdf.set_font('THSarabun', 'B', 14)
     pdf.set_fill_color(240, 240, 240)
     pdf.cell(15, 10, "ลำดับ", 1, 0, "C", True)
@@ -72,40 +72,14 @@ def create_transfer_pdf(data):
         pdf.cell(80, 10, f" {row.get('เลขทรัพย์สิน/ชื่อรายการ', '')}", 1, 0, "L")
         pdf.cell(95, 10, f" {row.get('หมายเหตุ', '')}", 1, 1, "L")
     
-    # --- Footer & ลายเซ็น ---
+    # ลายเซ็น
     pdf.ln(10)
-    # ... (ส่วนลายเซ็นเหมือนเดิม แต่ต้องจัด Indent ให้อยู่ระดับเดียวกับคำสั่ง pdf.ln(10) นี้)
+    pdf.set_font('THSarabun', 'B', 11)
+    pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
     
-    # --- 4. Footer & ลายเซ็น (ตามภาพ image_3c108a.png) ---
-        pdf.ln(7)
-        pdf.set_font('THSarabun', 'B', 11)
-        pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
+    return pdf.output(dest='S').encode('latin-1')
 
-        pdf.ln(5)
-        w_sign = 63.3
-        pdf.set_font('THSarabun', 'B', 11)
-        pdf.cell(w_sign, 7, "1. ผู้ถือครองเดิม (ต้นทาง)", 0, 0, "C")
-        pdf.cell(w_sign, 7, "2. ผู้ถือครองใหม่ (ปลายทาง)", 0, 0, "C")
-        pdf.cell(w_sign, 7, "3. ผู้ดำเนินการโยกย้าย", 0, 1, "C")
-        pdf.ln(10)
-        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
-        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
-        pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
-        pdf.set_font('THSarabun', '', 10)
-        pdf.cell(w_sign, 5, f"( {data['s_old']} )", 0, 0, "C")
-        pdf.cell(w_sign, 5, f"( {data['s_new']} )", 0, 0, "C")
-        pdf.cell(w_sign, 5, f"( {data['it_staff']} )", 0, 1, "C")
-        pdf.ln(8)
-        pdf.set_font('THSarabun', 'B', 11)
-        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
-        pdf.cell(w_sign, 5, "______________________", 0, 0, "C")
-        pdf.cell(w_sign, 5, "______________________", 0, 1, "C")
-        pdf.set_font('THSarabun', '', 10)
-        pdf.cell(w_sign, 5, "( หัวหน้าต้นทาง )", 0, 0, "C")
-        pdf.cell(w_sign, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
-        pdf.cell(w_sign, 5, "( หัวหน้าฝ่าย IT )", 0, 1, "C")
-
-# --- ส่วน UI ---
+# --- 2. ส่วน UI ---
 st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
 
 if "df_data" not in st.session_state:
@@ -114,13 +88,10 @@ if "df_data" not in st.session_state:
 with st.container(border=True):
     col1, col2 = st.columns([2, 1])
     with col1:
-        # เพิ่ม Radio Button ให้เลือกประเภท
         transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True)
         st.write("---")
-        st.write("**รายการทรัพย์สิน**")
         edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True)
     with col2:
-        st.write("**ข้อมูลผู้ดำเนินการ**")
         to_location = st.text_input("สถานที่ปลายทาง")
         s_old = st.text_input("ชื่อผู้ถือครองเดิม")
         s_new = st.text_input("ชื่อผู้ถือครองใหม่")
@@ -142,7 +113,7 @@ if st.button("🚀 Generate PDF"):
         }
         try:
             pdf_out = create_transfer_pdf(pdf_data)
-            st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf")
-            st.success("✅ ครบถ้วนทุกส่วนแล้วครับ!")
+            st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=pdf_out, file_name="Transfer_Form.pdf", mime="application/pdf")
+            st.success("✅ พร้อมดาวน์โหลดแล้วครับ!")
         except Exception as e:
             st.error(f"Error: {e}")
