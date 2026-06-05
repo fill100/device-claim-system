@@ -10,6 +10,17 @@ def create_transfer_pdf(data):
     pdf.add_page()
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
+    font_path = os.path.join(current_dir, "THSarabunNew.ttf")
+    
+    # 1. ต้องมี uni=True สำหรับภาษาไทย
+    if os.path.exists(font_path):
+        pdf.add_font('THSarabun', '', font_path, uni=True)
+        pdf.add_font('THSarabun', 'B', font_path, uni=True)
+        pdf.set_font('THSarabun', 'B', 14)
+    else:
+        # ถ้าไม่มีฟอนต์ ให้ใช้ฟอนต์มาตรฐานแทนเพื่อกันโปรแกรมพัง
+        pdf.set_font('Arial', 'B', 14)
+        pdf.cell(0, 10, "Font not found!", 0, 1, "C")
     logo_path = os.path.join(current_dir, "FTS-LOGO-01.png")
     font_path = os.path.join(current_dir, "THSarabunNew.ttf")
 
@@ -50,12 +61,11 @@ def create_transfer_pdf(data):
     types = ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"]
     x_pos = [15, 55, 95, 135]
     
-    for i, t_name in enumerate(types):
+for i, t_name in enumerate(types):
         pdf.rect(x_pos[i], pdf.get_y()+2, 4, 4)
         if data['transfer_type'] == t_name:
-            pdf.set_font('Arial', 'B', 10)
-            pdf.text(x_pos[i]+0.8, pdf.get_y()+5.2, "X") # ทำเครื่องหมาย X
-            pdf.set_font('THSarabun', '', 14)
+            pdf.set_xy(x_pos[i]+0.5, pdf.get_y()+2)
+            pdf.cell(4, 4, "X", 0, 0, "C")
         
         pdf.set_x(x_pos[i]+7)
         display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
