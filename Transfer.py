@@ -84,7 +84,7 @@ def run_transfer_page():
         
         pdf.ln(7)
         pdf.set_font('THSarabun', 'B', 11)
-        pdf.multi_cell(0, 6, "ข้าพเจ้านับว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
+        pdf.multi_cell(0, 6, "ข้าพเจ้ายืนยันว่าได้รับ/ส่งมอบอุปกรณ์ข้างต้นในสภาพสมบูรณ์ หากเกิดความเสียหายจากการใช้งานผิดประเภทข้าพเจ้ายินดีรับผิดชอบตามระเบียบของบริษัท", align="C")
 
         pdf.ln(5)
         w_sign = 63.3
@@ -120,18 +120,18 @@ def run_transfer_page():
     with st.container(border=True):
         col1, col2 = st.columns([2, 1])
         with col1:
-            transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True)
+            transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True, key="transfer_type_radio_sp")
             st.write("---")
             st.write("**รายการทรัพย์สิน**")
-            edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_editor_unique")
+            edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_editor_sp")
         with col2:
             st.write("**ข้อมูลผู้ดำเนินการ**")
-            to_location = st.text_input("สถานที่ปลายทาง", key="transfer_to_loc")
-            s_old = st.text_input("ชื่อผู้ถือครองเดิม", key="transfer_s_old")
-            s_new = st.text_input("ชื่อผู้ถือครองใหม่", key="transfer_s_new")
-            it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)", key="transfer_it_staff")
+            to_location = st.text_input("สถานที่ปลายทาง", key="transfer_to_loc_sp")
+            s_old = st.text_input("ชื่อผู้ถือครองเดิม", key="transfer_s_old_sp")
+            s_new = st.text_input("ชื่อผู้ถือครองใหม่", key="transfer_s_new_sp")
+            it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)", key="transfer_it_staff_sp")
 
-    if st.button("🚀 Generate PDF", key="btn_generate_pdf_unique"):
+    if st.button("🚀 Generate PDF", key="btn_generate_pdf_sp"):
         clean_items = edited_df[edited_df["เลขทรัพย์สิน/ชื่อรายการ"].str.strip() != ""].to_dict('records')
         if not clean_items or not to_location:
             st.error("⚠️ กรุณากรอกรายการและสถานที่ปลายทาง")
@@ -147,7 +147,7 @@ def run_transfer_page():
             }
             try:
                 pdf_out = create_transfer_pdf(pdf_data)
-                st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf", key="download_pdf_btn")
+                st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf", key="download_pdf_btn_sp")
                 st.success("✅ ครบถ้วนทุกส่วนแล้วครับ!")
             except Exception as e:
                 st.error(f"Error: {e}")
