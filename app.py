@@ -11,7 +11,7 @@ def show_asset_system(conn):
             code = f.read()
             exec(code)
     except Exception as err:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ Asset System ได้: {err}")
+        st.error(f"⚠️ เกิดข้อผิดพลาดในการโหลด Asset System: {err}")
 
 def show_transfer_system(conn):
     try:
