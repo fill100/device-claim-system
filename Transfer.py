@@ -1,45 +1,23 @@
- import streamlit as st
-
+import streamlit as st
 import pandas as pd
-
 from datetime import datetime
 
-
 def run_transfer_page(conn):
-
     # ปรับแต่ง Header ให้ดูสะอาดขึ้น
-
     st.title("✈️ Transfer Management System")
-
     st.markdown("---")
-
-
     TRANSFER_COLUMNS = ["วันที่โอนย้าย", "Serial Number", "อุปกรณ์", "จากสาขา/สถานที่", "ไปสาขา/สถานที่", "ผู้โอนย้าย", "สถานะการขนส่ง"]
-
-    
-
     # ดึงข้อมูล
-
     try:
-
         df = conn.read(worksheet="Transfer Logs", ttl="0")
-
         if df is not None and not df.empty:
-
             df.columns = df.columns.str.strip()
-
             # เติมคอลัมน์ที่ขาดหายไปให้ครบ
-
             for col in TRANSFER_COLUMNS:
-
                 if col not in df.columns: df[col] = ""
-
             df = df[TRANSFER_COLUMNS].astype(str)
-
         else:
-
             df = pd.DataFrame(columns=TRANSFER_COLUMNS)
-
     except Exception as e:
 
         st.error(f"⚠️ ไม่สามารถเชื่อมต่อฐานข้อมูล: {e}")
