@@ -119,8 +119,6 @@ for i, row in enumerate(data['items'], 1):
         pdf.cell(w_sign, 5, "( หัวหน้าปลายทาง )", 0, 0, "C")
         pdf.cell(w_sign, 5, "( หัวหน้าฝ่าย IT )", 0, 1, "C")
 
-return pdf.output()
-
 # --- ส่วน UI ---
 st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
 
