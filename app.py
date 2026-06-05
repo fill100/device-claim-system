@@ -8,15 +8,14 @@ def show_asset_system(conn):
     try:
         with open("Wesgan.py", encoding="utf-8") as f:
             code = f.read()
-            ns = {} # สร้าง Dictionary เพื่อเก็บฟังก์ชันที่อยู่ในไฟล์
-            exec(code, ns) 
-            # เรียกใช้ฟังก์ชัน 'main' ที่อยู่ใน ns
+            ns = {} # สร้างกล่องบรรจุตัวแปร
+            exec(code, ns) # รันโค้ดและเก็บผลลัพธ์ไว้ใน ns
             if 'main' in ns:
-                ns['main'](conn) # ส่ง conn ไปด้วยหากฟังก์ชันต้องการ
+                ns['main'](conn) # เรียกฟังก์ชัน main จากไฟล์
             else:
                 st.error("ไม่พบฟังก์ชัน 'main' ในไฟล์ Wesgan.py")
     except Exception as e:
-        st.error(f"⚠️ เกิดข้อผิดพลาดในการโหลด Asset System: {e}")
+        st.error(f"เกิดข้อผิดพลาด: {e}")
 
 def show_transfer_system(conn):
     try:
@@ -24,13 +23,12 @@ def show_transfer_system(conn):
             code = f.read()
             ns = {}
             exec(code, ns)
-            # เรียกใช้ฟังก์ชัน 'run_transfer_page' ที่อยู่ใน ns
             if 'run_transfer_page' in ns:
                 ns['run_transfer_page'](conn)
             else:
                 st.error("ไม่พบฟังก์ชัน 'run_transfer_page' ในไฟล์ Transfer.py")
     except Exception as e:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบ โอนย้ายของ ได้: {e}")
+        st.error(f"เกิดข้อผิดพลาด: {e}")
         
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
