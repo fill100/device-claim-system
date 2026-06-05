@@ -3,8 +3,12 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
 
-# --- ตั้งค่าหน้ากระดาษ ---
+# --- 1. ตั้งค่าหน้ากระดาษ (ทำครั้งเดียวที่บนสุดของไฟล์) ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
+
+# --- 2. ตัวแปรควบคุมหน้าเว็บ (ต้องอยู่บนสุด ก่อนที่จะมีการเรียกใช้ใน Sidebar) ---
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "Device Claim"
 
 # --- ปรับปรุงสีตัวหนังสือและซ่อนเมนูเดิม (คงไว้ตามดีไซน์ของคุณ) ---
 st.markdown("""
