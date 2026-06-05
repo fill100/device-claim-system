@@ -73,14 +73,14 @@ for i, t_name in enumerate(types):
         pdf.ln(10)
 
     # --- 3. ตารางรายการทรัพย์สิน (Manual) ---
-    pdf.set_font('THSarabun', 'B', 14)
-    pdf.set_fill_color(240, 240, 240)
-    w_no, w_asset, w_note = 15, 80, 95
-    h_cell = 10
+        pdf.set_font('THSarabun', 'B', 14)
+        pdf.set_fill_color(240, 240, 240)
+        w_no, w_asset, w_note = 15, 80, 95
+        h_cell = 10
 
-    pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
-    pdf.cell(w_asset, h_cell, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
-    pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
+        pdf.cell(w_no, h_cell, "ลำดับ", 1, 0, "C", True)
+        pdf.cell(w_asset, h_cell, "เลขทรัพย์สิน / รายการอุปกรณ์", 1, 0, "C", True)
+        pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
 
     pdf.set_font('THSarabun', '', 14)
     for i, row in enumerate(data['items'], 1):
