@@ -70,7 +70,7 @@ for i, t_name in enumerate(types):
         pdf.set_x(x_pos[i]+7)
         display_name = t_name if t_name != "อื่นๆ" else "อื่นๆ............................."
         pdf.cell(40, 8, display_name, 0, 0)
-    pdf.ln(10)
+        pdf.ln(10)
 
     # --- 3. ตารางรายการทรัพย์สิน (Manual) ---
     pdf.set_font('THSarabun', 'B', 14)
