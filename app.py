@@ -46,12 +46,21 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- เมนูนำทางแบบสลับหน้าจริง (Multipage Link) ---
+# --- Sidebar Menu (เปลี่ยนเป็นปุ่มกดสลับหน้าแบบหน้าเดียวที่ปลอดภัยที่สุด) ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
-    # ใช้ st.page_link ที่ชี้ไปยังไฟล์จริง ระบบจะไม่แครชและไม่เกิดลูปซ้อนกัน
-    st.page_link("app.py", label="Device Claim", icon="📑", disabled=True)
-    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
-    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+    
+    if st.button("📑 Device Claim", use_container_width=True, type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
+        st.session_state.current_page = "Device Claim"
+        st.rerun()
+        
+    if st.button("🛡️ Asset System", use_container_width=True, type="primary" if st.session_state.current_page == "Asset System" else "secondary"):
+        st.session_state.current_page = "Asset System"
+        st.rerun()
+        
+    if st.button("✈️ โอนย้ายของ", use_container_width=True, type="primary" if st.session_state.current_page == "Transfer" else "secondary"):
+        st.session_state.current_page = "Transfer"
+        st.rerun()
 
 # --- 1. เชื่อมต่อฐานข้อมูล ---
 try:
