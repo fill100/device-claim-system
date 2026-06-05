@@ -2,13 +2,59 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
+import Transfer
+import Wesgan
 
 # --- 1. ตั้งค่าหน้ากระดาษ (ทำครั้งเดียวที่บนสุดของไฟล์) ---
-st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
+st.markdown("""
+    <style>
+    [data-testid="stSidebarNav"] {display: none;}
+    [data-testid="stSidebarNavItems"] {display: none;}
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 2. ตัวแปรควบคุมหน้าเว็บ (ต้องอยู่บนสุด ก่อนที่จะมีการเรียกใช้ใน Sidebar) ---
+# จัดการ State สำหรับควบคุมการสลับหน้า
 if "current_page" not in st.session_state:
     st.session_state.current_page = "Device Claim"
+
+# --- สร้าง Sidebar เมนูแบบปุ่มกด (Single-page Navigation) ---
+with st.sidebar:
+    st.markdown("# 💻 IT Management")
+    
+    # ปุ่มหน้า Device Claim
+    if st.button("📑 Device Claim", use_container_width=True, 
+                 type="primary" if st.session_state.current_page == "Device Claim" else "secondary"):
+        st.session_state.current_page = "Device Claim"
+        st.rerun()
+        
+    # ปุ่มหน้า Asset System
+    if st.button("🛡️ Asset System", use_container_width=True, 
+                 type="primary" if st.session_state.current_page == "Asset System" else "secondary"):
+        st.session_state.current_page = "Asset System"
+        st.rerun()
+        
+    # ปุ่มหน้า โอนย้ายของ
+    if st.button("✈️ โอนย้ายของ", use_container_width=True, 
+                 type="primary" if st.session_state.current_page == "โอนย้ายของ" else "secondary"):
+        st.session_state.current_page = "โอนย้ายของ"
+        st.rerun()
+
+# --- ส่วนการแสดงผลเนื้อหาตามหน้าทีเลือก ---
+if st.session_state.current_page == "Device Claim":
+    st.title("📝 Claim Management System")
+    # ---------------------------------------------------------
+    # โค้ดระบบดั้งเดิมของหน้า Device Claim ของพี่ (พวกตาราง กราฟ ดึงข้อมูล) 
+    # เอามาแปะใส่ไว้ตรงส่วนนี้ได้เลยครับครับพี่
+    # ---------------------------------------------------------
+    st.write("แสดงข้อมูลระบบ Claim ดั้งเดิมที่นี่...")
+
+elif st.session_state.current_page == "Asset System":
+    # เรียกฟังก์ชันจากไฟล์ Wesgan.py มาทำงานในหน้านี้
+    Wesgan.run_asset_page()
+
+elif st.session_state.current_page == "โอนย้ายของ":
+    # เรียกฟังก์ชันจากไฟล์ Transfer.py มาทำงานในหน้านี้
+    Transfer.run_transfer_page()
 
 # --- ปรับปรุงสีตัวหนังสือและซ่อนเมนูเดิม (คงไว้ตามดีไซน์ของคุณ) ---
 st.markdown("""
