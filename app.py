@@ -17,20 +17,21 @@ def show_asset_system(conn):
     except Exception as e:
         st.error(f"เกิดข้อผิดพลาด: {e}")
 
+# ตัวอย่างการแก้ฟังก์ชันใน app.py
 def show_transfer_system(conn):
     try:
         with open("Transfer.py", encoding="utf-8") as f:
             code = f.read()
-            # ใช้ dictionary เปล่าๆ เป็น namespace
-            ns = {} 
-            exec(code, ns) 
-            # เรียกฟังก์ชันผ่าน ns
+            ns = {} # สร้าง Dictionary เพื่อเก็บฟังก์ชันที่อยู่ในไฟล์
+            exec(code, ns) # รันโค้ดและเก็บฟังก์ชันไว้ใน ns
+            
+            # เรียกใช้ฟังก์ชันที่ประกาศไว้ในไฟล์ผ่านทาง ns
             if 'run_transfer_page' in ns:
                 ns['run_transfer_page'](conn)
             else:
                 st.error("ไม่พบฟังก์ชัน 'run_transfer_page' ในไฟล์ Transfer.py")
-    except Exception as err:
-        st.error(f"⚠️ เกิดข้อผิดพลาด: {err}")
+    except Exception as e:
+        st.error(f"⚠️ เกิดข้อผิดพลาด: {e}")
         
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
