@@ -5,11 +5,7 @@ from fpdf import FPDF
 import os
 
 def run_transfer_page():
-    try:
-        conn = st.connection("gsheets", type=st.connection.experimental_gsheets.GSheetsConnection if hasattr(st.connection, "experimental_gsheets") else "gsheets")
-    except:
-        pass
-
+    # --- 1. ฟังก์ชันสร้าง PDF ---
     def create_transfer_pdf(data):
         pdf = FPDF()
         pdf.add_page()
@@ -112,6 +108,7 @@ def run_transfer_page():
 
         return pdf.output()
 
+    # --- ส่วน UI หน้าจอหลัก ---
     st.title("📦 ระบบพิมพ์ใบโอนย้ายทรัพย์สิน")
 
     if "df_data" not in st.session_state:
@@ -120,18 +117,18 @@ def run_transfer_page():
     with st.container(border=True):
         col1, col2 = st.columns([2, 1])
         with col1:
-            transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True, key="transfer_type_radio_sp")
+            transfer_type = st.radio("**ประเภทการดำเนินการ**", ["โอนย้ายปกติ", "ส่งซ่อม/เคลม", "ตัดจำหน่าย", "อื่นๆ"], horizontal=True, key="transfer_radio_sp_fixed")
             st.write("---")
             st.write("**รายการทรัพย์สิน**")
-            edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_editor_sp")
+            edited_df = st.data_editor(st.session_state.df_data, num_rows="dynamic", use_container_width=True, key="transfer_editor_sp_fixed")
         with col2:
             st.write("**ข้อมูลผู้ดำเนินการ**")
-            to_location = st.text_input("สถานที่ปลายทาง", key="transfer_to_loc_sp")
-            s_old = st.text_input("ชื่อผู้ถือครองเดิม", key="transfer_s_old_sp")
-            s_new = st.text_input("ชื่อผู้ถือครองใหม่", key="transfer_s_new_sp")
-            it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)", key="transfer_it_staff_sp")
+            to_location = st.text_input("สถานที่ปลายทาง", key="transfer_to_loc_sp_fixed")
+            s_old = st.text_input("ชื่อผู้ถือครองเดิม", key="transfer_s_old_sp_fixed")
+            s_new = st.text_input("ชื่อผู้ถือครองใหม่", key="transfer_s_new_sp_fixed")
+            it_staff = st.text_input("ชื่อผู้ดำเนินการ (IT)", key="transfer_it_staff_sp_fixed")
 
-    if st.button("🚀 Generate PDF", key="btn_generate_pdf_sp"):
+    if st.button("🚀 Generate PDF", key="btn_generate_pdf_sp_fixed"):
         clean_items = edited_df[edited_df["เลขทรัพย์สิน/ชื่อรายการ"].str.strip() != ""].to_dict('records')
         if not clean_items or not to_location:
             st.error("⚠️ กรุณากรอกรายการและสถานที่ปลายทาง")
@@ -147,7 +144,7 @@ def run_transfer_page():
             }
             try:
                 pdf_out = create_transfer_pdf(pdf_data)
-                st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf", key="download_pdf_btn_sp")
+                st.download_button(label="📥 ดาวน์โหลดไฟล์ PDF", data=bytes(pdf_out), file_name="Transfer_Form.pdf", mime="application/pdf", key="download_pdf_btn_sp_fixed")
                 st.success("✅ ครบถ้วนทุกส่วนแล้วครับ!")
             except Exception as e:
                 st.error(f"Error: {e}")
