@@ -5,13 +5,17 @@ from datetime import datetime, timedelta, date
 import sys # อย่าลืม import sys ไว้ด้านบนสุดของไฟล์ด้วยนะครับ
 
 # แก้ไขการประกาศฟังก์ชันใหม่ให้ถูกต้องตามหลักภาษา Python
-def show_asset_system(conn):
+# ใน app.py ส่วนที่เช็คสถานะหน้าจอ
+elif st.session_state.current_page == "Transfer":
     try:
-        with open("Wesgan.py", encoding="utf-8") as f:
+        with open("Transfer.py", encoding="utf-8") as f:
             code = f.read()
-            exec(code)
-    except Exception as err:
-        st.error(f"⚠️ เกิดข้อผิดพลาดในการโหลด Asset System: {err}")
+            namespace = {}
+            exec(code, namespace)
+            # เรียกฟังก์ชันในไฟล์ Transfer.py
+            namespace['run_transfer_page'](conn)
+    except Exception as e:
+        st.error(f"โหลดหน้า Transfer ไม่สำเร็จ: {e}")
 
 def show_transfer_system(conn):
     try:
