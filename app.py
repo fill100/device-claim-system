@@ -2,8 +2,7 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
-import Transfer
-import Wesgan
+import importlib
 
 # --- 1. ตั้งค่าหน้ากระดาษ (ทำครั้งเดียวที่บนสุดของไฟล์หลัก) ---
 st.set_page_config(page_title="IT Management System", layout="wide")
@@ -51,7 +50,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. เมนูนำทาง Sidebar แบบ Single-page (ยุบรวมเหลือชุดเดียว ไม่ซ้ำซ้อน) ---
+# --- 3. เมนูนำทาง Sidebar แบบ Single-page ยุบรวมเหลือชุดเดียว ---
 with st.sidebar:
     st.markdown("# 💻 IT Management")
     
@@ -72,7 +71,7 @@ with st.sidebar:
 # ----------------- หน้าที่ 1: DEVICE CLAIM -----------------
 if st.session_state.current_page == "Device Claim":
     
-    # เชื่อมต่อฐานข้อมูล (เฉพาะหน้านี้)
+    # เชื่อมต่อฐานข้อมูล
     try:
         conn = st.connection("gsheets", type=GSheetsConnection)
     except Exception as e:
@@ -119,7 +118,7 @@ if st.session_state.current_page == "Device Claim":
             except: continue
         return pd.concat(all_data, ignore_index=True) if all_data else None
 
-    # เพิ่มคอนโทรลเสริมยัดเข้า Sidebar ของหน้านี้
+    # ตั้งค่าและรายงานใน Sidebar
     with st.sidebar:
         st.divider()
         st.title("🛠️ ตั้งค่าและรายงาน")
@@ -150,14 +149,14 @@ if st.session_state.current_page == "Device Claim":
             if full_report is not None:
                 st.download_button("✅ Click to Download All", convert_df(full_report), "all_devices.csv", "text/csv")
 
-    # --- เนื้อหาหน้าจอหลัก Device Claim ---
+    # --- หน้าหลัก Device Claim ---
     st.title("📑 Claim Management System")
 
     col_ws, col_search = st.columns([1, 2])
     with col_ws:
         selected_sheet = st.selectbox("📂 เลือก Worksheet:", st.session_state.available_sheets)
 
-    # ดึงข้อมูลจากกูเกิ้ลชีตมาแสดงผล
+    # ดึงข้อมูลจาก Google Sheets
     try:
         df = conn.read(worksheet=selected_sheet, ttl="0")
         if df is not None and not df.empty:
@@ -197,68 +196,119 @@ if st.session_state.current_page == "Device Claim":
         </div>
         """, unsafe_allow_html=True)
 
-    # --- ส่วนฟอร์มเพิ่มข้อมูล ---
-    with st.expander("➕ เพิ่มรายการแจ้งซ่อม"):
-        with st.form("add_form", clear_on_submit=True):
-            f1, f2 = st.columns(2)
-            with f1:
-                br = st.selectbox("สาขา", BRANCH_LIST)
-                cnt = st.text_input("Counter")
-                sn_f = st.text_input("Serial เครื่องเสีย (บังคับ)")
-            with f2:
-                stt = st.selectbox("สถานะ", ["inprogress", "Done"])
-                dt_clm = st.date_input("วันทีนำไปติดตั้งใหม่", value=None)
-                sn_n = st.text_input("Serial เครื่องเปลี่ยนใหม่")
+    # --- 🌟 ฟังก์ชัน: เพิ่มรายการแจ้งซ่อมแบบหลายรายการ (Bulk Import) ---
+    with st.expander("➕ เพิ่มรายการแจ้งซ่อม (เพิ่มได้ทีละหลายรายการ)"):
+        st.write("💡 พี่สามารถก๊อปปี้ข้อมูลจาก Excel/Sheets มาวาง หรือพิมพ์เพิ่มแถวในตารางด้านล่างได้เลยครับ")
+        
+        # คีย์ข้อมูลจำลองตั้งต้น
+        if "bulk_add_df" not in st.session_state:
+            st.session_state.bulk_add_df = pd.DataFrame([{
+                "สาขา": BRANCH_LIST[0], "counter": "", "Serial เครื่องที่เสีย": "", 
+                "Serial เครื่องที่ส่งให้ศูนย์": "", "สถานะ": "inprogress", "วันทีนำไปติดตั้งใหม่": None
+            }])
             
-            if st.form_submit_button("บันทึกข้อมูล"):
-                if sn_f:
-                    now_thailand = datetime.now() + timedelta(hours=7)
-                    time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
-                    new_row = pd.DataFrame([{
-                        "วันที่รับแจ้ง": time_str, "วันทีนำไปติดตั้งใหม่": dt_clm.strftime("%Y-%m-%d") if dt_clm else "",
-                        "สาขา": br, "counter": cnt, "Serial เครื่องที่เสีย": sn_f, "สถานะ": stt,
-                        "Serial เครื่องที่ส่งให้ศูนย์": sn_n
-                    }])
-                    df = pd.concat([df, new_row], ignore_index=True).astype(str)
+        edited_add_df = st.data_editor(
+            st.session_state.bulk_add_df,
+            num_rows="dynamic",
+            use_container_width=True,
+            column_config={
+                "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST, required=True),
+                "counter": st.column_config.TextColumn("Counter"),
+                "Serial เครื่องที่เสีย": st.column_config.TextColumn("Serial เครื่องที่เสีย (บังคับ)", required=True),
+                "Serial เครื่องที่ส่งให้ศูนย์": st.column_config.TextColumn("Serial เครื่องที่ส่งให้ศูนย์"),
+                "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"], required=True),
+                "วันทีนำไปติดตั้งใหม่": st.column_config.DateColumn("วันทีนำไปติดตั้งใหม่")
+            },
+            key="bulk_add_editor"
+        )
+        
+        if st.button("💾 บันทึกรายการทั้งหมดที่เพิ่ม", type="primary"):
+            # กรองแถวที่กรอก Serial เครื่องเสียจริงๆ ไม่เป็นค่าว่าง
+            valid_rows = edited_add_df[edited_add_df["Serial เครื่องที่เสีย"].str.strip() != ""].copy()
+            
+            if valid_rows.empty:
+                st.error("⚠️ ไม่พบข้อมูลที่กรอกเลข Serial เครื่องที่เสีย")
+            else:
+                now_thailand = datetime.now() + timedelta(hours=7)
+                time_str = now_thailand.strftime("%Y-%m-%d %H:%M")
+                
+                prepared_rows = []
+                for _, row in valid_rows.iterrows():
+                    dt_val = row["วันทีนำไปติดตั้งใหม่"]
+                    prepared_rows.append({
+                        "วันที่รับแจ้ง": time_str,
+                        "วันทีนำไปติดตั้งใหม่": dt_val.strftime("%Y-%m-%d") if pd.notnull(dt_val) else "",
+                        "สาขา": row["สาขา"],
+                        "counter": row["counter"],
+                        "Serial เครื่องที่เสีย": row["Serial เครื่องที่เสีย"],
+                        "Serial เครื่องที่ส่งให้ศูนย์": row["Serial เครื่องที่ส่งให้ศูนย์"],
+                        "สถานะ": row["สถานะ"]
+                    })
+                
+                new_data_df = pd.DataFrame(prepared_rows).astype(str)
+                df = pd.concat([df, new_data_df], ignore_index=True).astype(str)
+                
+                try:
                     conn.update(worksheet=selected_sheet, data=df)
-                    st.success("บันทึกข้อมูลสำเร็จ!")
+                    st.success(f"บันทึกข้อมูลสำเร็จทั้งหมด {len(new_data_df)} รายการ!")
+                    if "bulk_add_df" in st.session_state:
+                        del st.session_state.bulk_add_df # รีเซ็ตตาราง
                     st.rerun()
+                except Exception as e:
+                    st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
 
-    # --- ส่วนแก้ไข/ลบ ---
+    # --- 🌟 ฟังก์ชัน: แก้ไข หรือ ลบรายการทีละหลายรายการ (Bulk Edit / Delete) ---
     if not df.empty:
-        with st.expander("📝 แก้ไข หรือ ลบรายการ"):
-            sn_list = df["Serial เครื่องที่เสีย"].unique().tolist()
-            sel_sn = st.selectbox("เลือก Serial ที่ต้องการจัดการ:", sn_list)
-            idx = df.index[df["Serial เครื่องที่เสีย"] == sel_sn].tolist()[0]
-            row = df.loc[idx]
-            with st.form("edit_full_form"):
-                e1, e2, e3 = st.columns(3)
-                with e1:
-                    new_d_rec = st.text_input("วันที่รับแจ้ง", value=str(row["วันที่รับแจ้ง"]))
-                    try: curr_d_ins = datetime.strptime(str(row["วันทีนำไปติดตั้งใหม่"]), "%Y-%m-%d")
-                    except: curr_d_ins = None
-                    new_d_ins = st.date_input("วันทีนำไปติดตั้งใหม่", value=curr_d_ins)
-                    new_s = st.selectbox("สถานะ", ["inprogress", "Done"], index=0 if str(row["สถานะ"]).lower() == "inprogress" else 1)
-                with e2:
-                    new_b = st.selectbox("สาขา", BRANCH_LIST, index=BRANCH_LIST.index(str(row["สาขา"])) if str(row["สาขา"]) in BRANCH_LIST else 0)
-                    new_c = st.text_input("Counter", value=str(row["counter"]))
-                with e3:
-                    new_sn_f = st.text_input("Serial เครื่องที่เสีย", value=str(row["Serial เครื่องที่เสีย"]))
-                    new_sn_ctr = st.text_input("Serial เครื่องที่ส่งให้ศูนย์", value=str(row["Serial เครื่องที่ส่งให้ศูนย์"]))
-                if st.form_submit_button("💾 บันทึกการแก้ไข"):
-                    df = df.astype(object)
-                    df.at[idx, "วันที่รับแจ้ง"] = new_d_rec
-                    df.at[idx, "วันทีนำไปติดตั้งใหม่"] = new_d_ins.strftime("%Y-%m-%d") if new_d_ins else ""
-                    df.at[idx, "สาขา"] = new_b
-                    df.at[idx, "counter"] = new_c
-                    df.at[idx, "Serial เครื่องที่เสีย"] = new_sn_f
-                    df.at[idx, "Serial เครื่องที่ส่งให้ศูนย์"] = new_sn_ctr
-                    df.at[idx, "สถานะ"] = new_s
-                    conn.update(worksheet=selected_sheet, data=df.astype(str))
-                    st.success("อัปเดตเรียบร้อย!")
-                    st.rerun()
+        with st.expander("📝 แก้ไข หรือ ลบรายการ (เลือกทำพร้อมกันได้หลายรายการ)"):
+            st.write("💡 ติ๊กถูกที่ช่อง **'เลือกเพื่อลบ'** หน้ารายการเพื่อเลือกข้อมูลที่ต้องการลบพร้อมกัน หรือแก้ในตารางแล้วกดบันทึก")
+            
+            # ยัด Checkbox นำหน้าข้อมูลในตารางแก้ไข
+            edit_df = df.copy()
+            edit_df.insert(0, "เลือกเพื่อลบ", False)
+            
+            edited_table = st.data_editor(
+                edit_df,
+                use_container_width=True,
+                column_config={
+                    "เลือกเพื่อลบ": st.column_config.CheckboxColumn("เลือกเพื่อลบ", default=False),
+                    "วันที่รับแจ้ง": st.column_config.TextColumn("วันที่รับแจ้ง", disabled=True),
+                    "สาขา": st.column_config.SelectboxColumn("สาขา", options=BRANCH_LIST),
+                    "สถานะ": st.column_config.SelectboxColumn("สถานะ", options=["inprogress", "Done"])
+                },
+                key="bulk_edit_delete_editor",
+                hide_index=True
+            )
+            
+            del_col, save_col, _ = st.columns([1, 1, 3])
+            
+            with del_col:
+                if st.button("🗑️ ลบรายการที่เลือก", type="secondary", use_container_width=True):
+                    # กรองเอาแถวที่ไม่ได้โดนติ๊กเลือกไว้ (ตัวที่โดนติ๊กจะถูกคัดทิ้งไป)
+                    items_to_keep = edited_table[edited_table["เลือกเพื่อลบ"] == False].drop(columns=["เลือกเพื่อลบ"])
+                    deleted_count = len(df) - len(items_to_keep)
+                    
+                    if deleted_count == 0:
+                        st.warning("⚠️ กรุณาติ๊กถูกเลือกรายการในตารางก่อนกดลบครับ")
+                    else:
+                        try:
+                            conn.update(worksheet=selected_sheet, data=items_to_keep.astype(str))
+                            st.success(f"🗑️ ลบรายการสำเร็จทั้งหมด {deleted_count} รายการเรียบร้อย!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"ไม่สามารถลบข้อมูลได้: {e}")
+                            
+            with save_col:
+                if st.button("💾 บันทึกการแก้ไขตาราง", type="primary", use_container_width=True):
+                    # ดึงคอลัมน์ checkbox ออกก่อนเซฟคืน Google Sheets
+                    final_to_save = edited_table.drop(columns=["เลือกเพื่อลบ"])
+                    try:
+                        conn.update(worksheet=selected_sheet, data=final_to_save.astype(str))
+                        st.success("💾 อัปเดตข้อมูลในตารางเรียบร้อย!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"ไม่สามารถบันทึกข้อมูลได้: {e}")
 
-    # --- ตารางผลลัพธ์ ---
+    # --- ตารางผลลัพธ์การค้นหาด้านล่างสุด ---
     st.divider()
     view = df.copy()
     if q:
@@ -269,8 +319,16 @@ if st.session_state.current_page == "Device Claim":
 
 # ----------------- หน้าที่ 2: ASSET SYSTEM -----------------
 elif st.session_state.current_page == "Asset System":
-    Wesgan.run_asset_page()
+    import Wesgan
+    if hasattr(Wesgan, 'run_asset_page'):
+        Wesgan.run_asset_page()
+    else:
+        importlib.reload(Wesgan)
 
 # ----------------- หน้าที่ 3: โอนย้ายของ -----------------
 elif st.session_state.current_page == "Transfer":
-    Transfer.run_transfer_page()
+    import Transfer
+    if hasattr(Transfer, 'run_transfer_page'):
+        Transfer.run_transfer_page()
+    else:
+        importlib.reload(Transfer)
