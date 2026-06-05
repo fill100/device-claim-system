@@ -83,7 +83,7 @@ for i, t_name in enumerate(types):
         pdf.cell(w_note, h_cell, "หมายเหตุรายรายการ", 1, 1, "C", True)
 
         pdf.set_font('THSarabun', '', 14)
-    for i, row in enumerate(data['items'], 1):
+for i, row in enumerate(data['items'], 1):
         asset_val = str(row.get("เลขทรัพย์สิน/ชื่อรายการ", ""))
         note_val = str(row.get("หมายเหตุ", ""))
         pdf.cell(w_no, h_cell, str(i), 1, 0, "C")
