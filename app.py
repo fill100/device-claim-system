@@ -39,22 +39,7 @@ with st.sidebar:
         st.session_state.current_page = "โอนย้ายของ"
         st.rerun()
 
-# --- ส่วนการแสดงผลเนื้อหาตามหน้าทีเลือก ---
-if st.session_state.current_page == "Device Claim":
-    st.title("📝 Claim Management System")
-    # ---------------------------------------------------------
-    # โค้ดระบบดั้งเดิมของหน้า Device Claim ของพี่ (พวกตาราง กราฟ ดึงข้อมูล) 
-    # เอามาแปะใส่ไว้ตรงส่วนนี้ได้เลยครับครับพี่
-    # ---------------------------------------------------------
-    st.write("แสดงข้อมูลระบบ Claim ดั้งเดิมที่นี่...")
 
-elif st.session_state.current_page == "Asset System":
-    # เรียกฟังก์ชันจากไฟล์ Wesgan.py มาทำงานในหน้านี้
-    Wesgan.run_asset_page()
-
-elif st.session_state.current_page == "โอนย้ายของ":
-    # เรียกฟังก์ชันจากไฟล์ Transfer.py มาทำงานในหน้านี้
-    Transfer.run_transfer_page()
 
 # --- ปรับปรุงสีตัวหนังสือและซ่อนเมนูเดิม (คงไว้ตามดีไซน์ของคุณ) ---
 st.markdown("""
