@@ -21,14 +21,16 @@ def show_transfer_system(conn):
     try:
         with open("Transfer.py", encoding="utf-8") as f:
             code = f.read()
-            ns = {}
-            exec(code, ns)
+            # ใช้ dictionary เปล่าๆ เป็น namespace
+            ns = {} 
+            exec(code, ns) 
+            # เรียกฟังก์ชันผ่าน ns
             if 'run_transfer_page' in ns:
                 ns['run_transfer_page'](conn)
             else:
                 st.error("ไม่พบฟังก์ชัน 'run_transfer_page' ในไฟล์ Transfer.py")
-    except Exception as e:
-        st.error(f"เกิดข้อผิดพลาด: {e}")
+    except Exception as err:
+        st.error(f"⚠️ เกิดข้อผิดพลาด: {err}")
         
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
