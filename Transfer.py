@@ -1,11 +1,16 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from fpdf import FPDF
+try:
+    from fpdf import FPDF
+except ImportError:
+    FPDF = None
 import os
 
 # --- 1. ฟังก์ชันสร้าง PDF (แก้ไขแล้ว) ---
 def create_transfer_pdf(data):
+    if FPDF is None:
+        raise ImportError("The fpdf package is not installed. Install it with `pip install fpdf`.")
     pdf = FPDF()
     pdf.add_page()
     
