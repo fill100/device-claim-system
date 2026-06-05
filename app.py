@@ -10,9 +10,13 @@ def show_asset_system(conn):
             code = f.read()
             ns = {}
             exec(code, ns)
-            ns['main']() # สมมติว่าใน Wesgan.py มีฟังก์ชันชื่อ main()
+            # ตรวจสอบว่าใน Wesgan.py มีการประกาศ def main(): ไว้หรือไม่
+            if 'main' in ns:
+                ns['main']()
+            else:
+                st.error("ไม่พบฟังก์ชันชื่อ 'main' ในไฟล์ Wesgan.py")
     except Exception as e:
-        st.error(f"⚠️ ไม่สามารถโหลด Asset System: {e}")
+        st.error(f"⚠️ Error: {e}")
 
 def show_transfer_system(conn):
     try:
@@ -20,9 +24,13 @@ def show_transfer_system(conn):
             code = f.read()
             ns = {}
             exec(code, ns)
-            ns['run_transfer_page'](conn) # เรียกฟังก์ชันจาก Transfer.py
+            # ตรวจสอบว่าใน Transfer.py มีการประกาศ def run_transfer_page(conn): ไว้หรือไม่
+            if 'run_transfer_page' in ns:
+                ns['run_transfer_page'](conn)
+            else:
+                st.error("ไม่พบฟังก์ชันชื่อ 'run_transfer_page' ในไฟล์ Transfer.py")
     except Exception as e:
-        st.error(f"⚠️ ไม่สามารถโหลดระบบโอนย้าย: {e}")
+        st.error(f"⚠️ Error: {e}")
         
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
