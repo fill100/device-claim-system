@@ -5,6 +5,15 @@ from datetime import datetime, timedelta
 
 # --- ตั้งค่าหน้ากระดาษ ---
 st.set_page_config(page_title="💻 JVFS IT Management System", layout="wide")
+with st.sidebar:
+    st.markdown("# 💻 IT Management")
+    # เรียกไฟล์หลัก (app.py) โดยใช้ชื่อไฟล์ หรือไม่ต้องเรียกหากเป็นหน้าแรก
+    st.page_link("app.py", label="Device Claim", icon="📑")
+    # เรียกไฟล์ในโฟลเดอร์ pages
+    st.page_link("pages/Wesgan.py", label="Asset System", icon="🛡️")
+    st.page_link("pages/Transfer.py", label="โอนย้ายของ", icon="✈️")
+    st.divider()
+    st.title("📑 Claim Management System")
 
 # --- ปรับปรุงสีตัวหนังสือให้ชัดเจนที่สุด (High Contrast) ---
 st.markdown("""
