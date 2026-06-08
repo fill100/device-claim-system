@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import importlib
 
 # --- 1. ตั้งค่าหน้ากระดาษ (ทำครั้งเดียวที่บนสุดของไฟล์หลัก) ---
-st.set_page_config(page_title="IT Management System", layout="wide")
+st.set_page_config(page_title="💻 IT Management System", layout="wide")
 
 # จัดการ State สำหรับควบคุมการสลับหน้า
 if "current_page" not in st.session_state:
